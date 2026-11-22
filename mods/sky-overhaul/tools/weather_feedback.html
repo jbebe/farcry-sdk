@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather Feedback</title>
+<style>
+  :root {
+    --bg: #f4f2ee;
+    --card: #ffffff;
+    --ink: #22201c;
+    --muted: #6d675e;
+    --line: #e2ddd4;
+    --accent: #2f6f9f;
+    --good: #2e7d4f;
+    --good-bg: #e3f2e8;
+    --work: #b25a12;
+    --work-bg: #fbeadb;
+    --chip: #efebe4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a;
+      --card: #212326;
+      --ink: #e9e6e1;
+      --muted: #9b968e;
+      --line: #34373b;
+      --accent: #7db3dc;
+      --good: #7fd19d;
+      --good-bg: #1f3428;
+      --work: #f0a868;
+      --work-bg: #3a2a1c;
+      --chip: #2c2f33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 96px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .progress {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 24px;
+  }
+  .pill {
+    padding: 4px 10px; border-radius: 999px; background: var(--chip);
+    font-size: 13px; color: var(--muted);
+  }
+  .pill b { color: var(--ink); }
+  .pill.good b { color: var(--good); }
+  .pill.work b { color: var(--work); }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); margin: 28px 0 10px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px; display: flex; flex-direction: column; gap: 10px;
+    border-left: 4px solid var(--line);
+  }
+  .card.good { border-left-color: var(--good); }
+  .card.work { border-left-color: var(--work); }
+  .title { display: flex; align-items: baseline; gap: 8px; }
+  .id {
+    font: 600 13px/1 ui-monospace, Consolas, monospace; padding: 4px 6px;
+    border-radius: 5px; background: var(--chip);
+  }
+  .name { font-weight: 600; }
+  .hint { color: var(--muted); font-size: 13.5px; margin: 0; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .seg button, .when label {
+    font: inherit; font-size: 13px; border: 1px solid var(--line); background: transparent;
+    color: var(--ink); padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"].good { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+  .seg button[aria-pressed="true"].work { background: var(--work-bg); border-color: var(--work); color: var(--work); }
+  .when label { display: inline-flex; gap: 5px; align-items: center; user-select: none; }
+  .when input { margin: 0; accent-color: var(--accent); }
+  .when .label { color: var(--muted); font-size: 13px; margin-right: 2px; }
+  textarea {
+    width: 100%; min-height: 64px; resize: vertical; font: inherit; font-size: 14px;
+    color: var(--ink); background: transparent; border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px;
+  }
+  textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .general textarea { min-height: 110px; }
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
+    border-top: 1px solid var(--line); padding: 10px 16px;
+  }
+  .bar .inner { max-width: 980px; margin: 0 auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .bar button {
+    font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+  }
+  .bar button.primary { background: var(--accent); border-color: var(--accent); color: var(--card); }
+  .bar .status { color: var(--muted); font-size: 13px; margin-left: auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Weather feedback</h1>
+  <p class="lead">Hold a weather on DevTools' Weather tab (Home), set the hour on the Environment tab, and
+    note what reads wrong. Everything saves in this browser as you type; Download gives me a file to read.</p>
+  <div class="progress" id="progress"></div>
+  <div id="families"></div>
+  <h2>Across weathers</h2>
+  <div class="card general">
+    <p class="hint">Transitions on the timeline, storm cells passing over, morning fog, anything not tied to one
+      weather.</p>
+    <textarea id="general" placeholder="Notes"></textarea>
+  </div>
+</main>
+<div class="bar">
+  <div class="inner">
+    <button class="primary" id="download">Download .md</button>
+    <button id="copy">Copy as Markdown</button>
+    <button id="clear">Clear all</button>
+    <span class="status" id="status"></span>
+  </div>
+</div>
+<script>
+const WEATHERS = [
+  ["Clear", "C1", "Clear sky", "No cumulus, no cirrus, still air. Blue sky, heat haze over the ground by day, the sun a disc through dusk, a smaller setting sun, moonlight from about 22:40, no brighter than C6's night, the moon's craters showing with a faint corona, stars faint at 15 degrees up and gone near the horizon."],
+  ["Clear", "C2", "Light cirrus", "A thin cirrus veil, no cumulus, still air."],
+  ["Clear", "C3", "Strong cirrus", "Cirrus over much of the sky, a little haze, still air."],
+  ["Clear", "C4", "A few cumulus", "A few small, flat cumulus, a light breeze."],
+  ["Clear", "C5", "Lots of cumulus and cirrus", "Cumulus over about half the sky with cirrus above, a light breeze. At night the ground dark, the clouds dimly moonlit, and only those overhead lit."],
+  ["Clear", "C6", "Thick but light cumulus", "Thick but pale cumulus over half the sky, no cirrus, a light breeze, less heat haze."],
+  ["Clear", "C7", "Hazy and dry", "A few cumulus, a hazy milky sky, dust in the air over dry ground, a light breeze. At dusk the sun sinks dimmed into the haze, not a bright blob. Fewer stars than a clear night."],
+  ["Fog", "F1", "Fog under full cirrus", "Cool white fog ending at about 150 m, no dust colour in it, the land at the horizon in the fog's colour, full cirrus, still air, no heat haze."],
+  ["Fog", "F2", "Fog, cumulus and full cirrus", "The same fog with cumulus under the cirrus and darker cloud bases."],
+  ["Fog", "F3", "Storm warning", "Full dark cirrus, a few dark cumulus, grey fog at about 200 m, still air, far cirrus an even haze. On the timeline a storm always follows."],
+  ["Overcast", "O1", "Overcast", "Grey cloud over almost all the sky, flat light, a breeze, no rain. At night no moonlight, close to black."],
+  ["Overcast", "O2", "Drizzle", "Overcast with light drizzle, wet ground, wet surfaces shining by day without showing their triangles, no sky colour on leaves in a bush, no splashes on the ground, rain fog to about 200 m."],
+  ["Overcast", "O3", "Steady rain", "Thick overcast, steady rain slanted by the wind, rain fog to about 110 m, no misty sheet near you. Wet materials shine without a white sheen, metal no brighter than its own; puddles only on level ground, mirroring the walls, trees and sky round them, with a darker soaked rim, drops ringing, no splashes; no whiter band or rings round you on wet ground, trunks not bright at night; lakes ring with quick, sharp drops with a white crown."],
+  ["Storm", "S1", "Gathering", "Cumulus growing tall and dark, a gusty wind, no rain yet."],
+  ["Storm", "S2", "Thunderstorm", "Dark storm sky, rain, gusts, lightning in the clouds and to the ground, thunder after each flash."],
+  ["Storm", "S3", "Heavy storm", "Near-black sky, a downpour, a gale, frequent lightning, rain fog to about 60 m. At night black but for the lightning."],
+  ["Storm", "S4", "Clearing", "Clouds breaking up, a light wind, wet ground. Before 9:00 or after 17:30, a faint rainbow opposite the sun."],
+  ["Wind", "W1", "Breezy", "A few cumulus, a strong wind bending trees and grass."],
+  ["Wind", "W2", "Windy and hazy", "A very strong wind, dust lifted off dry ground, a hazy, milky sky."],
+];
+const TIMES = ["Day", "Dusk", "Night"];
+const STORE = "fc2-weather-feedback-v1";
+
+let state = { rows: {}, general: "" };
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE) || "null");
+  if (saved && saved.rows) state = saved;
+} catch (e) {}
+
+function row(id) {
+  return state.rows[id] || (state.rows[id] = { status: "", times: [], notes: "" });
+}
+
+function save() {
+  let note = "Saved in this browser";
+  try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { note = "Not saved: this browser blocks storage here"; }
+  document.getElementById("status").textContent = note;
+  renderProgress();
+}
+
+function renderProgress() {
+  let good = 0, work = 0;
+  for (const [, id] of WEATHERS) {
+    const s = (state.rows[id] || {}).status;
+    if (s === "good") good++;
+    if (s === "work") work++;
+  }
+  const left = WEATHERS.length - good - work;
+  document.getElementById("progress").innerHTML =
+    `<span class="pill good"><b>${good}</b> good</span>` +
+    `<span class="pill work"><b>${work}</b> need work</span>` +
+    `<span class="pill"><b>${left}</b> not checked</span>`;
+}
+
+function card([, id, name, hint]) {
+  const r = row(id);
+  const el = document.createElement("div");
+  el.className = "card" + (r.status ? " " + r.status : "");
+  el.innerHTML = `
+    <div class="title"><span class="id">${id}</span><span class="name">${name}</span></div>
+    <p class="hint">${hint}</p>
+    <div class="row seg">
+      <button class="good" data-status="good">Good</button>
+      <button class="work" data-status="work">Needs work</button>
+    </div>
+    <div class="row when"><span class="label">Seen by</span>
+      ${TIMES.map(t => `<label><input type="checkbox" value="${t}">${t}</label>`).join("")}
+    </div>
+    <textarea placeholder="What reads wrong, and when"></textarea>`;
+  const buttons = el.querySelectorAll(".seg button");
+  const paint = () => {
+    buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.status === r.status)));
+    el.className = "card" + (r.status ? " " + r.status : "");
+  };
+  buttons.forEach(b => b.addEventListener("click", () => {
+    r.status = r.status === b.dataset.status ? "" : b.dataset.status;
+    paint();
+    save();
+  }));
+  el.querySelectorAll(".when input").forEach(box => {
+    box.checked = r.times.includes(box.value);
+    box.addEventListener("change", () => {
+      r.times = TIMES.filter(t => el.querySelector(`.when input[value="${t}"]`).checked);
+      save();
+    });
+  });
+  const notes = el.querySelector("textarea");
+  notes.value = r.notes;
+  notes.addEventListener("input", () => { r.notes = notes.value; save(); });
+  paint();
+  return el;
+}
+
+function render() {
+  const root = document.getElementById("families");
+  root.innerHTML = "";
+  let family = null, grid = null;
+  for (const w of WEATHERS) {
+    if (w[0] !== family) {
+      family = w[0];
+      const h = document.createElement("h2");
+      h.textContent = family;
+      grid = document.createElement("div");
+      grid.className = "grid";
+      root.append(h, grid);
+    }
+    grid.append(card(w));
+  }
+  const general = document.getElementById("general");
+  general.value = state.general || "";
+  general.oninput = () => { state.general = general.value; save(); };
+  renderProgress();
+}
+
+function markdown() {
+  const label = { good: "Good", work: "Needs work" };
+  const lines = [`# Weather feedback, ${new Date().toISOString().slice(0, 10)}`, ""];
+  const unchecked = [];
+  for (const [, id, name] of WEATHERS) {
+    const r = state.rows[id] || {};
+    if (!r.status && !(r.notes || "").trim()) { unchecked.push(id); continue; }
+    const seen = r.times && r.times.length ? ` (seen by ${r.times.join(", ").toLowerCase()})` : "";
+    lines.push(`## ${id} ${name}: ${label[r.status] || "Not marked"}${seen}`, "");
+    if ((r.notes || "").trim()) lines.push(r.notes.trim(), "");
+  }
+  if ((state.general || "").trim()) lines.push("## Across weathers", "", state.general.trim(), "");
+  if (unchecked.length) lines.push(`Not checked: ${unchecked.join(", ")}`, "");
+  return lines.join("\n");
+}
+
+document.getElementById("download").addEventListener("click", () => {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([markdown()], { type: "text/markdown" }));
+  link.download = "weather-feedback.md";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+document.getElementById("copy").addEventListener("click", async () => {
+  const status = document.getElementById("status");
+  try { await navigator.clipboard.writeText(markdown()); status.textContent = "Copied"; }
+  catch (e) { status.textContent = "Copy was blocked; use Download"; }
+});
+document.getElementById("clear").addEventListener("click", () => {
+  if (!confirm("Clear all feedback?")) return;
+  state = { rows: {}, general: "" };
+  save();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
 #include "engine/locate.h"
+#include "engine/rain_cover.h"
 #include "engine/solid_depth.h"
 #include "fcse_api.h"
 
@@ -60,6 +61,10 @@ namespace {
     constexpr UINT kDomeVertices = 714;
     constexpr UINT kDomePrimitives = 1450;
 
+    // The star sphere's mesh, which the engine draws through the night with no dome after it once
+    // the night is full.
+    constexpr UINT kStarVertices = 10320;
+
     // The moon shares the celestial sprites' counts with the sun's flare, and is told from it by
     // its pixel shader: one of the two fogged CelestialBody objects rather than the flare's
     // additive, unfogged pair.
@@ -71,9 +76,10 @@ namespace {
 
     // The moon's parameters in the pixel shader: time of day, visibility, HDR multiplier, horizon
     // factor. The texture is scaled by visibility times the multiplier, and the world's own
-    // multiplier of ten saturates a high, unfogged moon to a white disc.
+    // multiplier of ten saturates a high, unfogged moon to a white disc; at most half of one keeps
+    // its maria and craters dark on its face.
     constexpr UINT kMoonParams = 71;
-    constexpr float kMoonPeak = 1.0f;
+    constexpr float kMoonPeak = 0.5f;
 
     // A full-screen pass is one or two triangles, which spares every other draw the shader lookup
     // while only the grade is watched for.
@@ -92,6 +98,7 @@ namespace {
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
     SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
+    SkyOverhaul::DomeDraw::ShineFn g_shine = nullptr;
     SkyOverhaul::DomeDraw::FoliageFn g_foliage = nullptr;
     SkyOverhaul::DomeDraw::VertexFn g_vertex = nullptr;
     // A bit per DepthUser that wants the linear depth watched for.
@@ -103,6 +110,7 @@ namespace {
     // No pass has this serial, so the first dome of the session is not mistaken for a second one.
     uint32_t g_drawnPass = 0xFFFFFFFFu;
     uint32_t g_maskedPass = 0xFFFFFFFFu;
+    uint32_t g_starsPass = 0xFFFFFFFFu;
 
     // Everything here is on the path every indexed draw of the renderer takes, some seventeen
     // hundred of them a frame, so the whole of it is two compares and a mode until a draw matches.
@@ -242,24 +250,47 @@ namespace {
     template <class Draw>
     HRESULT WatchShaders(IDirect3DDevice9* device, UINT primitives, Draw draw) {
         using SkyOverhaul::KnownShaders::Kind;
+        using SkyOverhaul::KnownShaders::VertexKind;
+        const bool raining = SkyOverhaul::RainCover::Drawn();
+        const VertexKind vertex = g_foliage != nullptr || raining
+                                      ? SkyOverhaul::KnownShaders::VertexBound(device)
+                                      : VertexKind::Other;
+        // Leaves let the rain through, so they stay out of the engine's rain cover map.
+        if (raining && vertex != VertexKind::Other && SkyOverhaul::RainCover::Drawing(device)) {
+            return D3D_OK;
+        }
         if (SkyOverhaul::SolidDepth::Begin(device)) {
             draw();
             SkyOverhaul::SolidDepth::End(device);
         }
-        if (g_foliage != nullptr) {
-            using SkyOverhaul::KnownShaders::VertexKind;
-            const VertexKind vertex = SkyOverhaul::KnownShaders::VertexBound(device);
-            if (vertex != VertexKind::Other && vertex != VertexKind::Foliage) {
-                return DrawFoliage(device, g_foliage, vertex, draw);
-            }
+        if (g_foliage != nullptr && vertex != VertexKind::Other && vertex != VertexKind::Foliage) {
+            return DrawFoliage(device, g_foliage, vertex, draw);
         }
         const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
-        if (g_depthUsers == 0 && !gradeShape) {
+        if (g_depthUsers == 0 && !gradeShape && g_shine == nullptr) {
             return draw();
         }
         const SkyOverhaul::KnownShaders::Known known = SkyOverhaul::KnownShaders::Bound(device);
         if (known.kind == Kind::DepthReader && g_depthUsers != 0) {
             SkyOverhaul::DepthTexture::Observe(device);
+        }
+        if (known.shine != nullptr && g_shine != nullptr) {
+            SkyOverhaul::DomeDraw::ShineSaved saved;
+            saved.count = 0;
+            saved.texture = nullptr;
+            g_shine(device, known.shine, saved);
+            if (saved.count == 0 && saved.texture == nullptr) {
+                return draw();
+            }
+            const HRESULT drawn = draw();
+            for (int i = 0; i < saved.count; i++) {
+                device->SetPixelShaderConstantF(saved.registers[i], saved.values[i], 1);
+            }
+            if (saved.texture != nullptr) {
+                device->SetTexture(saved.sampler, saved.texture);
+                saved.texture->Release();
+            }
+            return drawn;
         }
 
         float engine[kGradeRegisters * 4] = {};
@@ -303,6 +334,9 @@ namespace {
         if (Substitute(device, type, numVertices, primitiveCount) ||
             SubstituteMask(device, type)) {
             return D3D_OK;
+        }
+        if (numVertices == kStarVertices) {
+            g_starsPass = SkyOverhaul::Frame::PassSerial();
         }
         const auto engineDraw = [&] {
             return g_original(self, unused, engineType, baseVertexIndex, minVertexIndex,
@@ -370,12 +404,21 @@ void SkyOverhaul::DomeDraw::SetMode(Mode mode) {
     g_mode = mode;
 }
 
+bool SkyOverhaul::DomeDraw::SkyOwed() {
+    const uint32_t pass = Frame::PassSerial();
+    return g_mode == Mode::Overhaul && g_starsPass == pass && g_drawnPass != pass;
+}
+
 void SkyOverhaul::DomeDraw::SetMaskSubstitute(SubstituteFn mask) {
     g_maskSubstitute = mask;
 }
 
 void SkyOverhaul::DomeDraw::SetGrade(GradeFn grade) {
     g_grade = grade;
+}
+
+void SkyOverhaul::DomeDraw::SetShine(ShineFn shine) {
+    g_shine = shine;
 }
 
 void SkyOverhaul::DomeDraw::SetFoliage(FoliageFn foliage) {

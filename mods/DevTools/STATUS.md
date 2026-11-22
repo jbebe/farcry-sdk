@@ -24,6 +24,7 @@ Stage: active
 - [done] Overlay, AI view, frame stats and fc2drive's screenshots through the engine's Present, EndScene and Reset, with no Direct3D hooks, so they work under dgVoodoo and DLSS injectors - fc2drive drove a run end to end under dgVoodoo #63
 - [done] Command API: console lines and Lua on the game thread, a 277-command catalog - run, works
 - [done] Environment tab: the clock and forced storm, rain and wind - forcing confirmed in game 2026-09-13
+- [done] Weather tab: a button per Sky Overhaul weather to hold it, Timeline to let it run, a storm cell put down, and the weather overhead, read through its sky_overhaul_weather.h - fc2drive's skycell pictures 2026-11-20, the tab itself unseen
 - [done] Diagnostics tab: frame, GPU and memory against a benchmark baseline
 - [done] Lua tab, with script errors and System:Log lines caught
 - [done] Spawner: vehicles and soldier squads - soldiers seen 2026-10-25
@@ -48,6 +49,7 @@ Stage: active
 - The Range tab's arena start facing - probably wrong, unchecked
 - The grass field, grass crest and tamarix bush arenas - fc2drive only
 - The overlay on Home and its windows through the engine's Present, without and under dgVoodoo - fc2drive saw the FPS readout and the AI view only
+- The Weather tab: each weather's button changes the sky at once and lights up, Timeline lets it go, and Storm, Rain and Wind forced on the Environment tab still win; with a DevTools-config.ini from before, Weather still shows as a tab
 ## Approvals
 
 ## Checks
@@ -64,5 +66,6 @@ Stage: active
 - 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks
 - 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
 - sky-overhaul: stacks - both hook the engine device's EndScene, which FCSE chains
+- 0x00118AE0, 0x0011B480: stacks - the environment manager's wind push and rain update, which DevTools and Sky Overhaul hook; DevTools loads first in name order, so its forcing runs beneath Sky's weather and wins
 - 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
 - 0x00345C70: stacks - DevTools' precache and UFCP's frame-limiter mid-hooks sit 0x4A1 bytes apart on both builds, neither inside the other's pattern

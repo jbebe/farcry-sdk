@@ -2,6 +2,7 @@
 
 #include "engine/com.h"
 #include "fcse_api.h"
+#include "hash.h"
 
 #include <algorithm>
 #include <atomic>
@@ -36,21 +37,8 @@ namespace {
     IDirect3DVolumeTexture9* g_turbulence = nullptr;
     bool g_refused = false;
 
-    uint32_t Hash(int x, int y, int z, uint32_t seed) {
-        uint32_t value = static_cast<uint32_t>(x) * 0x8DA6B343u +
-                         static_cast<uint32_t>(y) * 0xD8163841u +
-                         static_cast<uint32_t>(z) * 0xCB1AB31Fu + seed * 0x165667B1u;
-        value ^= value >> 15;
-        value *= 0x2C1B3C6Du;
-        value ^= value >> 12;
-        value *= 0x297A2D39u;
-        value ^= value >> 15;
-        return value;
-    }
-
-    float Unit(uint32_t hash) {
-        return static_cast<float>(hash & 0xFFFFFFu) / 16777215.0f;
-    }
+    using SkyOverhaul::Hash;
+    using SkyOverhaul::Unit;
 
     int Wrap(int value, int period) {
         const int wrapped = value % period;
@@ -205,28 +193,67 @@ namespace {
         g_ready.store(true, std::memory_order_release);
     }
 
+    // A volume half the size each way, each texel the mean of the eight it covers.
+    std::vector<uint8_t> Halved(int size, const std::vector<uint8_t>& bytes) {
+        const int half = size / 2;
+        std::vector<uint8_t> out(static_cast<size_t>(half) * half * half * 4);
+        const size_t row = static_cast<size_t>(size) * 4;
+        const size_t slice = row * size;
+        const size_t corners[8] = {0, 4, row, row + 4, slice, slice + 4, slice + row, slice + row + 4};
+        uint8_t* texel = out.data();
+        for (int z = 0; z < half; z++) {
+            for (int y = 0; y < half; y++) {
+                const uint8_t* first = bytes.data() + 2 * z * slice + 2 * y * row;
+                for (int x = 0; x < half; x++, first += 8, texel += 4) {
+                    int sum[4] = {};
+                    for (size_t corner : corners) {
+                        for (int c = 0; c < 4; c++) {
+                            sum[c] += first[corner + c];
+                        }
+                    }
+                    for (int c = 0; c < 4; c++) {
+                        texel[c] = static_cast<uint8_t>((sum[c] + 4) / 8);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    // `mipped` adds the smaller levels down to a single texel, for reads that blur with distance.
     bool UploadVolume(IDirect3DDevice9* device, int size, const std::vector<uint8_t>& bytes,
-                      IDirect3DVolumeTexture9** out) {
-        if (FAILED(device->CreateVolumeTexture(size, size, size, 1, 0, D3DFMT_A8R8G8B8,
+                      IDirect3DVolumeTexture9** out, bool mipped = false) {
+        UINT levels = 1;
+        while (mipped && (size >> levels) > 0) {
+            levels++;
+        }
+        if (FAILED(device->CreateVolumeTexture(size, size, size, levels, 0, D3DFMT_A8R8G8B8,
                                                D3DPOOL_MANAGED, out, nullptr))) {
             return false;
         }
-        D3DLOCKED_BOX box = {};
-        if (FAILED((*out)->LockBox(0, &box, nullptr, 0))) {
-            SkyOverhaul::Release(*out);
-            return false;
-        }
-        const size_t row = static_cast<size_t>(size) * 4;
-        for (int z = 0; z < size; z++) {
-            auto* slice =
-                static_cast<uint8_t*>(box.pBits) + static_cast<size_t>(z) * box.SlicePitch;
-            for (int y = 0; y < size; y++) {
-                std::memcpy(slice + static_cast<size_t>(y) * box.RowPitch,
-                            bytes.data() + (static_cast<size_t>(z) * size + y) * row, row);
+        std::vector<uint8_t> level = bytes;
+        for (UINT index = 0;; index++) {
+            D3DLOCKED_BOX box = {};
+            if (FAILED((*out)->LockBox(index, &box, nullptr, 0))) {
+                SkyOverhaul::Release(*out);
+                return false;
             }
+            const size_t row = static_cast<size_t>(size) * 4;
+            for (int z = 0; z < size; z++) {
+                auto* slice =
+                    static_cast<uint8_t*>(box.pBits) + static_cast<size_t>(z) * box.SlicePitch;
+                for (int y = 0; y < size; y++) {
+                    std::memcpy(slice + static_cast<size_t>(y) * box.RowPitch,
+                                level.data() + (static_cast<size_t>(z) * size + y) * row, row);
+                }
+            }
+            (*out)->UnlockBox(index);
+            if (index + 1 == levels) {
+                return true;
+            }
+            level = Halved(size, level);
+            size /= 2;
         }
-        (*out)->UnlockBox(0);
-        return true;
     }
 
     bool UploadPlane(IDirect3DDevice9* device, int size, const std::vector<uint8_t>& bytes,
@@ -267,7 +294,7 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
         return false;
     }
 
-    if (!UploadVolume(device, kShapeSize, g_shapeBytes, &g_shape) ||
+    if (!UploadVolume(device, kShapeSize, g_shapeBytes, &g_shape, true) ||
         !UploadVolume(device, kDetailSize, g_detailBytes, &g_detail) ||
         !UploadPlane(device, kWeatherSize, g_weatherBytes, &g_weather) ||
         !UploadVolume(device, kTurbulenceSize, g_turbulenceBytes, &g_turbulence)) {
@@ -295,10 +322,6 @@ IDirect3DTexture9* SkyOverhaul::Noise::Weather() {
 
 IDirect3DVolumeTexture9* SkyOverhaul::Noise::Turbulence() {
     return g_turbulence;
-}
-
-float SkyOverhaul::Noise::Random(int x, int y, int z, uint32_t seed) {
-    return Unit(Hash(x, y, z, seed));
 }
 
 void SkyOverhaul::Noise::ReleaseDeviceObjects() {

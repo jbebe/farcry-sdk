@@ -10,11 +10,18 @@ namespace SkyOverhaul::SkyModel {
 // How far a storm factor has risen past fair weather, from nought to one in a full storm.
 float Storminess(float storm);
 
+// The storm factor that rises that far past fair weather.
+float StormFactor(float storminess);
+
 // How much haze the air carries at that storminess.
 float Haze(float storminess);
 
 // The share of the sun's light that reaches the air at that storminess.
 float SunShare(float storminess);
+
+// The share of a sun at `sunHeight` (a sine) that comes through haze beyond what the storminess
+// alone carries: all of it overhead, about two fifths on the horizon in a hazy day's air.
+float ThroughHaze(float sunHeight, float extraHaze);
 
 // How far the moon's light has come up, from nought on the horizon to one once it has climbed, for a
 // moon direction's height.
@@ -27,6 +34,14 @@ float Grey(float storminess);
 // below about five degrees, `full` from twenty-five, and all of it again as a storm dims the light
 // itself.
 float DaylightCut(float sunHeight, float storminess, float full);
+
+// How far into dusk a sun at `sunHeight` (a sine) stands, nought to one: in from five degrees up to
+// ten, out again from twenty-five to forty. The sun's glare and haze are held weak through it.
+float Dusk(float sunHeight);
+
+// How far the night has taken over from a sun at `sunHeight` (a sine), nought to one: from three
+// degrees up to six down.
+float Night(float sunHeight);
 
 // What one look along `ray` comes back with, given a sun direction, the eye's height in metres,
 // how much haze the air carries and how bright the sun is. Both directions are unit length, Z up.

@@ -14,6 +14,7 @@
 #include "engine/shader.h"
 #include "engine/time_of_day.h"
 #include "tuning.h"
+#include "weather/weather.h"
 
 #include "sky_land_ps.h"
 #include "sky_ps.h"
@@ -30,7 +31,7 @@ namespace {
     // next draw if a plugin wrote over them. The clouds use the same range: the two never draw in
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 8;
+    constexpr UINT kConstantCount = 9;
 
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
@@ -44,6 +45,9 @@ namespace {
     // longer clips.
     constexpr float kSunIntensity = 41.4f;
     constexpr float kDaylight = 0.5f;
+
+    // The share of its haze the sky keeps through dusk, so the glow round the sun leaves it a disc.
+    constexpr float kDuskHazeKept = 0.3f;
 
     // The sun's height, as a sine, over which the land's fog darkens for the dusk: from seven degrees
     // up to a degree and a half.
@@ -174,11 +178,18 @@ namespace {
         }
 
         // The weather is folded in here, so what crosses into the shader is already finished.
-        const float storminess = SkyOverhaul::SkyModel::Storminess(lighting.storm);
-        const float haze = SkyOverhaul::SkyModel::Haze(storminess);
+        const SkyOverhaul::Weather::Air air = SkyOverhaul::Weather::AirNow(lighting.storm);
+        const float storminess = air.storminess;
         const float intensity =
             kSunIntensity * SkyOverhaul::SkyModel::SunShare(storminess) *
-            SkyOverhaul::SkyModel::DaylightCut(lighting.sunDirection[2], storminess, kDaylight);
+            SkyOverhaul::SkyModel::DaylightCut(lighting.sunDirection[2], storminess, kDaylight) *
+            SkyOverhaul::SkyModel::ThroughHaze(lighting.sunDirection[2],
+                                               air.haze - SkyOverhaul::SkyModel::Haze(storminess));
+        // Thinned through dusk unless a storm greys the sky.
+        const float haze =
+            air.haze * (1.0f - (1.0f - kDuskHazeKept) *
+                                   SkyOverhaul::SkyModel::Dusk(lighting.sunDirection[2]) *
+                                   (1.0f - storminess));
 
         const SkyOverhaul::Tuning::Values v = SkyOverhaul::Tuning::Current();
         float hour = 12.0f;
@@ -198,7 +209,8 @@ namespace {
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
             fill[0], fill[1], v.horizonFillHaze, LandBrightness(hour),
-            lighting.moonDirection[0], lighting.moonDirection[1], lighting.moonDirection[2], 0.0f};
+            lighting.moonDirection[0], lighting.moonDirection[1], lighting.moonDirection[2], 0.0f,
+            air.milk, air.veil, 0.0f, 0.0f};
         std::copy_n(&view.corners[0][0], 12, &g_corners[0][0]);
 
         // The frame's air goes into the table at its end, for the next frame's dome; until a table
@@ -223,6 +235,16 @@ void SkyOverhaul::Sky::Install() {
 }
 
 void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
+    // Once the night is full the engine draws only its stars, so the sky goes over them here with
+    // the blend the dome would have given it, before the clouds.
+    if (pass.sky && pass.live && DomeDraw::SkyOwed()) {
+        ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
+        pass.device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
+        pass.device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        pass.device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        pass.device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+        Draw(pass.device);
+    }
     if (!std::exchange(g_landDrawn, false) || !pass.sky || !pass.live) {
         return;
     }

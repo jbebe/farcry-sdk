@@ -1,6 +1,9 @@
 #include "clouds.h"
 
+#include "cell_map.h"
 #include "depth_constants.h"
+#include "hash.h"
+#include "lightning.h"
 #include "sky.h"
 #include "sky_model.h"
 
@@ -8,18 +11,21 @@
 #include "engine/cloud_layer.h"
 #include "engine/depth_texture.h"
 #include "engine/dome_draw.h"
+#include "engine/environment.h"
 #include "engine/noise.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/time_of_day.h"
 #include "tuning.h"
+#include "weather/weather.h"
 
 #include "clouds_composite_ps.h"
 #include "clouds_cover_ps.h"
 #include "clouds_half_ps.h"
 #include "clouds_mask_ps.h"
 #include "clouds_shadow_ps.h"
+#include "clouds_sunlit_ps.h"
 
 #include <algorithm>
 #include <cmath>
@@ -32,11 +38,15 @@ namespace {
     // The trails' registers come last.
     constexpr UINT kTrailCount = 3;
     constexpr UINT kConstantCount = 17 + kTrailCount;
-    // The half-resolution march also reads the depth's registers, which follow the clouds' own.
+    // The half-resolution march also reads the depth's registers, which follow the clouds' own, and
+    // the lightning's after those.
+    constexpr UINT kFlashConstant =
+        SkyOverhaul::DepthConstants::kFirst + SkyOverhaul::DepthConstants::kCount;
     constexpr UINT kHalfConstantCount =
-        SkyOverhaul::DepthConstants::kFirst + SkyOverhaul::DepthConstants::kCount - kFirstConstant;
-    // Where CompositePS reads the march, past the noise and the depth.
+        kFlashConstant + SkyOverhaul::Lightning::kFlashes - kFirstConstant;
+    // Where CompositePS reads the march, past the noise and the depth, and where the cells are read.
     constexpr DWORD kHalfSampler = 4;
+    constexpr DWORD kCellSampler = 5;
 
     constexpr double kPi = 3.14159265358979;
 
@@ -49,9 +59,6 @@ namespace {
 
     // Metres a clock second the layer drifts at a wind of one. The clock runs ten times faster than play.
     constexpr double kWindSpeed = 0.9;
-    // Clock seconds for the wind to turn once round, and the radians it turns in one.
-    constexpr double kWindTurn = 3.0 * 86400.0;
-    constexpr double kWindTurnRate = 2.0 * kPi / kWindTurn;
 
     // How far apart the samples toward the light are. Wide enough that five of them reach through a
     // whole cloud, which is what a shadow inside one needs.
@@ -71,14 +78,25 @@ namespace {
     // brightly the air glows around the moon.
     constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
     constexpr float kBackShare = 0.13f;
-    constexpr float kMoonGlow = 0.25f;
+    constexpr float kMoonGlow = 0.1f;
+    // How much of the moonlight on the clouds a fully covered sky takes, the layer shading itself.
+    constexpr float kCoveredMoon = 0.5f;
 
-    // What a full storm makes of the layer's coverage and water and of the high sheet's opacity, and
-    // how much of the sky's light it takes from the base of its water-laden cloud.
+    // What the game's full storm makes of the layer's coverage and water and of the high sheet's
+    // opacity, with the weather off.
     constexpr float kStormCoverage = 0.65f;
     constexpr float kStormDensity = 0.09f;
     constexpr float kStormCirrusOpacity = 0.8f;
-    constexpr float kStormBaseShade = 0.8f;
+
+    // How deep the layer is at a tallness of nought, and how much deeper at one, against the tuned
+    // depth that a half gives.
+    constexpr float kFlatDepth = 0.4f;
+    constexpr float kTallDepth = 1.2f;
+
+    // How much of its distance a cloud keeps before it turns into the horizon, once the weather's fog
+    // swallows the land or the night is full: rain, fog and the dark hide far cloud as they hide far
+    // land.
+    constexpr float kVeiledCloudHaze = 0.1f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
     // streaks covers, and how hard those streaks are squashed across the wind.
@@ -111,15 +129,18 @@ namespace {
     float g_constants[kConstantCount * 4] = {};
     float g_corners[4][3] = {};
     bool g_drawn = false;
+    IDirect3DTexture9* g_cellMap = nullptr;
 
     SkyOverhaul::PixelShader g_halfShader{"clouds half", g_cloudsHalfPixelShader};
     SkyOverhaul::PixelShader g_compositeShader{"clouds composite", g_cloudsCompositePixelShader};
     SkyOverhaul::PixelShader g_coverShader{"clouds cover", g_cloudsCoverPixelShader};
     SkyOverhaul::PixelShader g_maskShader{"clouds mask", g_cloudsMaskPixelShader};
     SkyOverhaul::PixelShader g_shadowShader{"clouds shadow", g_cloudsShadowPixelShader};
+    SkyOverhaul::PixelShader g_sunlitShader{"clouds sunlit", g_cloudsSunlitPixelShader};
 
     // The march at half resolution: colour premultiplied, alpha what survives, as the layer blends.
     SkyOverhaul::OwnedTarget g_half{"clouds", D3DFMT_A16B16G16R16F};
+    SkyOverhaul::OwnedTarget g_sunlit{"clouds sunlit", D3DFMT_A16B16G16R16F};
 
     // The one light the shader marches toward, and the glow of the air around the moon.
     struct Light {
@@ -129,9 +150,27 @@ namespace {
         float glow[3];
     };
 
-    // The day's values carried toward an overcast sky as the storm rises: more of the sky filled,
-    // more water, the high sheet across all of it, and no aircraft above.
-    Values Weathered(Values v, float storminess) {
+    // How far the moon has taken over lighting the clouds from the sun, nought to one.
+    float MoonShare(float sunHeight) {
+        return std::clamp((kSunGone - sunHeight) / kMoonRising, 0.0f, 1.0f);
+    }
+
+    // The tuned values as the air mass has them, the cells being drawn from the map on top, or
+    // carried toward an overcast sky as the game's storm rises: more of the sky filled, more water,
+    // the high sheet across all of it, and no aircraft above. Fog and the night hide far cloud.
+    Values Weathered(Values v, const SkyOverhaul::Weather::Air& air, float night) {
+        v.cloudHaze *= 1.0f + (kVeiledCloudHaze - 1.0f) * (std::max)(air.veil, night);
+        if (air.weather) {
+            const SkyOverhaul::Weather::Levers& levers = air.sky;
+            v.cloudCoverage = levers.coverage;
+            v.cloudDensity = levers.density;
+            v.cloudThickness *= kFlatDepth + kTallDepth * levers.tallness;
+            v.cirrus = levers.cirrus;
+            v.cirrusOpacity = levers.cirrusOpacity;
+            v.contrails = levers.contrails;
+            return v;
+        }
+        const float storminess = air.storminess;
         v.cloudCoverage += (kStormCoverage - v.cloudCoverage) * storminess;
         v.cloudDensity += (kStormDensity - v.cloudDensity) * storminess;
         v.cirrus += (1.0f - v.cirrus) * storminess;
@@ -141,46 +180,45 @@ namespace {
     }
 
     // The sun until it has set for every layer, then the moon, coming up as the sun sinks further
-    // and as the moon itself climbs. The sun's light is what our own air lets through to the middle
-    // of the layer, dimmed as the sky is in a storm.
+    // and as the moon itself climbs, dimmer the more cloud there is. The sun's light is what our own
+    // air lets through to the middle of the layer, dimmed as the sky is in a storm.
     Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v,
-                      float storminess) {
+                      const SkyOverhaul::Weather::Air& air) {
+        const float storminess = air.storminess;
         const bool sun = lighting.sunDirection[2] > kSunGone;
-        const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
-        const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
-        const float moon = share * SkyOverhaul::SkyModel::MoonRise(lighting.moonDirection[2]);
+        const float moon = MoonShare(lighting.sunDirection[2]) *
+                           SkyOverhaul::SkyModel::MoonRise(lighting.moonDirection[2]);
 
         float sunlight[3];
         SkyOverhaul::SkyModel::Sunlight(lighting.sunDirection,
-                                        v.cloudBase + 0.5f * v.cloudThickness,
-                                        SkyOverhaul::SkyModel::Haze(storminess), sunlight);
+                                        v.cloudBase + 0.5f * v.cloudThickness, air.haze, sunlight);
         const float sunBrightness =
             kSunlight * SkyOverhaul::SkyModel::SunShare(storminess) *
             SkyOverhaul::SkyModel::DaylightCut(lighting.sunDirection[2], storminess, kDaylight);
+        const float moonlight = moon * (1.0f - kCoveredMoon * air.cover);
 
         Light light;
         for (int c = 0; c < 3; c++) {
             light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
-            light.colour[c] = sun ? sunlight[c] * sunBrightness : kMoonColour[c] * moon;
+            light.colour[c] = sun ? sunlight[c] * sunBrightness : kMoonColour[c] * moonlight;
             light.back[c] = light.colour[c] * kBackShare;
             light.glow[c] = kMoonColour[c] * moon * kMoonGlow;
         }
         return light;
     }
 
-    // Where the layer has drifted to, in metres, by `gameSeconds`, round the circle the turning wind
-    // traces.
+    // Where the layer has drifted to, in metres, by `gameSeconds`.
     void Drift(double gameSeconds, const Values& v, float out[2]) {
-        const double angle = std::fmod(gameSeconds, kWindTurn) * kWindTurnRate;
-        const double radius = kWindSpeed * v.cloudWind / kWindTurnRate;
-        out[0] = static_cast<float>(radius * std::sin(angle));
-        out[1] = static_cast<float>(radius * (1.0 - std::cos(angle)));
+        double drift[2];
+        SkyOverhaul::Weather::Drift(gameSeconds, kWindSpeed * v.cloudWind, drift);
+        out[0] = static_cast<float>(drift[0]);
+        out[1] = static_cast<float>(drift[1]);
     }
 
     // Day `day`'s aircraft trails, as the shader's registers take them: one to three, each through a
     // random point over the world in a random direction.
     void RollTrails(int day, float out[kTrailCount * 4]) {
-        using SkyOverhaul::Noise::Random;
+        using SkyOverhaul::Random;
         const int count = 1 + (std::min)(static_cast<int>(Random(day, 0, 0, kTrailSeed) * 3.0f), 2);
         for (int i = 0; i < static_cast<int>(kTrailCount); i++) {
             float* line = out + i * 4;
@@ -194,7 +232,8 @@ namespace {
         }
     }
 
-    // The shader, this frame's constants and the noise, sampled the way the shape expects.
+    // The shader, this frame's constants, the noise, sampled the way the shape expects, and the
+    // cells, clamped to the map.
     void Bind(IDirect3DDevice9* device, IDirect3DPixelShader9* shader) {
         device->SetPixelShader(shader);
         device->SetPixelShaderConstantF(kFirstConstant, g_constants, kConstantCount);
@@ -202,12 +241,15 @@ namespace {
         device->SetTexture(0, SkyOverhaul::Noise::Shape());
         device->SetTexture(1, SkyOverhaul::Noise::Detail());
         device->SetTexture(2, SkyOverhaul::Noise::Weather());
-        for (DWORD sampler = 0; sampler < 3; sampler++) {
-            device->SetSamplerState(sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-            device->SetSamplerState(sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-            device->SetSamplerState(sampler, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP);
+        device->SetTexture(kCellSampler, g_cellMap);
+        for (DWORD sampler : {0ul, 1ul, 2ul, kCellSampler}) {
+            const DWORD address = sampler == kCellSampler ? D3DTADDRESS_CLAMP : D3DTADDRESS_WRAP;
+            device->SetSamplerState(sampler, D3DSAMP_ADDRESSU, address);
+            device->SetSamplerState(sampler, D3DSAMP_ADDRESSV, address);
+            device->SetSamplerState(sampler, D3DSAMP_ADDRESSW, address);
             device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
             device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+            device->SetSamplerState(sampler, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         }
     }
 
@@ -227,6 +269,9 @@ namespace {
         Bind(device, shader);
         SkyOverhaul::DepthConstants::Set(device, view, depth, pass.backBuffer.Width,
                                          pass.backBuffer.Height);
+        float flashes[SkyOverhaul::Lightning::kFlashes * 4];
+        SkyOverhaul::Lightning::Flashes(flashes);
+        device->SetPixelShaderConstantF(kFlashConstant, flashes, SkyOverhaul::Lightning::kFlashes);
         {
             SkyOverhaul::AwayFromPass away(pass);
             device->SetRenderTarget(0, g_half.surface);
@@ -248,7 +293,7 @@ namespace {
     void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
-              const Values& v, float storminess, const float drift[2],
+              const Values& v, const SkyOverhaul::Weather::Air& air, const float drift[2],
               const float trails[kTrailCount * 4], const SkyOverhaul::DepthTexture::Found& depth) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
         const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
@@ -257,6 +302,13 @@ namespace {
         const float shapeGrain = 1.0f / v.cloudSize;
         float fill[2];
         SkyOverhaul::Sky::Fill(v, fill);
+        const float halfWidth = static_cast<float>((pass.backBuffer.Width + 1) / 2);
+        const float pixelAngle = 2.0f / (view.horizontalScale * halfWidth);
+        // The sky's fog by height as the game sets it, not as the weather reshapes it for the land.
+        float skyFog[4];
+        if (!SkyOverhaul::Environment::SkyFogHeight(skyFog)) {
+            std::copy_n(view.fogHeightValues, 4, skyFog);
+        }
         const float constants[(kConstantCount - kTrailCount) * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             v.cloudBase, v.cloudThickness, v.cloudCoverage, v.cloudDensity,
@@ -265,18 +317,17 @@ namespace {
             light.direction[0], light.direction[1], light.direction[2], kForwardScatter,
             light.colour[0], light.colour[1], light.colour[2], kLightStride,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2],
-            storminess * kStormBaseShade,
-            light.back[0], light.back[1], light.back[2], 0.0f,
+            air.shade,
+            light.back[0], light.back[1], light.back[2], pixelAngle,
             kMaxDistance, kFadeDistance, kMarchDistance, v.cloudHaze,
-            view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
+            view.fogColour[0], view.fogColour[1], view.fogColour[2], air.veil,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
-            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
-            view.fogHeightValues[3],
+            skyFog[0], skyFog[1], skyFog[2], skyFog[3],
             view.fogColourVector[0], view.fogColourVector[1], fill[0], fill[1],
             cirrusAltitude, kCirrusGrain, v.cirrus, v.cirrusOpacity,
             v.contrails, kTrailWidth, kTrailBreak, 0.0f,
-            light.glow[0], light.glow[1], light.glow[2], SkyOverhaul::SkyModel::Grey(storminess)};
+            light.glow[0], light.glow[1], light.glow[2], SkyOverhaul::SkyModel::Grey(air.storminess)};
         std::copy_n(trails, kTrailCount * 4,
                     std::copy(std::begin(constants), std::end(constants), g_constants));
         for (int corner = 0; corner < 4; corner++) {
@@ -311,19 +362,23 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         !Noise::Ensure(pass.device) || !DepthTexture::Latest(depth)) {
         return;
     }
+    g_cellMap = CellMap::Ensure(pass.device);
+    if (g_cellMap == nullptr) {
+        return;
+    }
 
-    const float storminess = SkyModel::Storminess(lighting.storm);
-    const Tuning::Values v = Weathered(Tuning::Current(), storminess);
-    const Light light = ChooseLight(lighting, v, storminess);
+    const Weather::Air air = Weather::AirNow(lighting.storm);
+    const Tuning::Values v = Weathered(Tuning::Current(), air, MoonShare(lighting.sunDirection[2]));
+    const Light light = ChooseLight(lighting, v, air);
     double gameSeconds = 0.0;
     float drift[2] = {};
-    if (TimeOfDay::Elapsed(gameSeconds)) {
+    if (Weather::Clock(gameSeconds) || TimeOfDay::Elapsed(gameSeconds)) {
         Drift(gameSeconds, v, drift);
     }
     const int day = static_cast<int>(gameSeconds / 86400.0);
     float trails[kTrailCount * 4];
     RollTrails(day, trails);
-    Draw(pass, shader, view, lighting, light, v, storminess, drift, trails, depth);
+    Draw(pass, shader, view, lighting, light, v, air, drift, trails, depth);
 }
 
 bool SkyOverhaul::Clouds::DrawCover(IDirect3DDevice9* device, float left, float top, float right,
@@ -363,14 +418,33 @@ bool SkyOverhaul::Clouds::DrawShadow(IDirect3DDevice9* device) {
     return guard.ClipQuad(0.0f, g_corners);
 }
 
+IDirect3DTexture9* SkyOverhaul::Clouds::Sunlit(const Frame::Pass& pass, const float sun[3]) {
+    IDirect3DPixelShader9* shader =
+        g_enabled && g_drawn && sun[2] > kSunGone ? g_sunlitShader.Get(pass.device) : nullptr;
+    if (shader == nullptr || !g_sunlit.Ensure(pass.device, 1, 1)) {
+        return nullptr;
+    }
+    ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
+    Bind(pass.device, shader);
+    const float toward[4][3] = {{sun[0], sun[1], sun[2]}, {sun[0], sun[1], sun[2]},
+                                {sun[0], sun[1], sun[2]}, {sun[0], sun[1], sun[2]}};
+    AwayFromPass away(pass);
+    pass.device->SetRenderTarget(0, g_sunlit.surface);
+    return draw.ClipQuad(0.0f, toward) ? g_sunlit.texture : nullptr;
+}
+
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
     Noise::ReleaseDeviceObjects();
+    CellMap::ReleaseDeviceObjects();
+    g_cellMap = nullptr;
     g_halfShader.Release();
     g_compositeShader.Release();
     g_coverShader.Release();
     g_maskShader.Release();
     g_shadowShader.Release();
+    g_sunlitShader.Release();
     g_half.Release();
+    g_sunlit.Release();
 }
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {

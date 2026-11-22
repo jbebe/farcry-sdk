@@ -31,6 +31,7 @@ SAVES = {
     "world2": "105502543219.sav",
     "guntest": "60145820471.sav",
     "bigtruck": "162773352691.sav",
+    "weather": "39053700748.sav",
 }
 
 # Seconds: a launch's wait for the pipe, a world's for loading and then for staying loaded, a gun's for
@@ -319,6 +320,17 @@ class Game:
 
     def goto(self, x, y, z, yaw=None):
         return self.call(f"goto {x} {y} {z}" + ("" if yaw is None else f" {yaw}"))
+
+    def sky_weather(self, row):
+        """Holds one of Sky Overhaul's weathers by id, `sky_weather("S3")`, or lets it run with "timeline".
+        Hands the storm, rain and wind back to the game first, so the weather's own show."""
+        self.call("weather engine")
+        self.call(f"skyweather {row}")
+
+    def sky_cell(self, where):
+        """Puts one of Sky Overhaul's storm cells down at its full, `sky_cell("ahead 8000")`, "over",
+        "upwind 6000", or takes it away with "off"."""
+        self.call(f"skycell {where}")
 
     def fix_light(self, hour):
         """Sets the hour and clears the weather, so shots of one place compare between runs."""

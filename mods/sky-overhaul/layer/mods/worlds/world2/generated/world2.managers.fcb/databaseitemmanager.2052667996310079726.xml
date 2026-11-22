@@ -19700,7 +19700,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.9375</x>
+                <x>0.935417</x>
                 <y>0.499326</y>
                 <z>0</z>
                 <w>0</w>
@@ -19715,7 +19715,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.979167</x>
+                <x>0.945833</x>
                 <y>1</y>
                 <z>0</z>
                 <w>0</w>
@@ -19800,11 +19800,11 @@
               <value name="Color" type="UInt32">0</value>
             </object>
             <object type="Knot">
-              <value name="Position" type="Float">0.9375</value>
+              <value name="Position" type="Float">0.935417</value>
               <value name="Color" type="UInt32">0</value>
             </object>
             <object type="Knot">
-              <value name="Position" type="Float">0.979167</value>
+              <value name="Position" type="Float">0.945833</value>
               <value name="Color" type="UInt32">16756630</value>
             </object>
             <object type="Knot">
@@ -20208,7 +20208,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.979167</x>
+                <x>0.945833</x>
                 <y>0.7</y>
                 <z>0</z>
                 <w>0</w>
@@ -21596,7 +21596,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.217295</x>
+                <x>0.20812</x>
                 <y>1.3</y>
                 <z>0</z>
                 <w>0</w>
@@ -21611,7 +21611,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.228628</x>
+                <x>0.21749</x>
                 <y>0.998992</y>
                 <z>0</z>
                 <w>0</w>
@@ -22136,7 +22136,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.9375</x>
+                <x>0.935417</x>
                 <y>0.99895</y>
                 <z>0</z>
                 <w>0</w>
@@ -22151,7 +22151,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.979167</x>
+                <x>0.945833</x>
                 <y>1.3</y>
                 <z>0</z>
                 <w>0</w>
@@ -22228,19 +22228,19 @@
               <value name="Color" type="UInt32">16756630</value>
             </object>
             <object type="Knot">
-              <value name="Position" type="Float">0.217295</value>
+              <value name="Position" type="Float">0.20812</value>
               <value name="Color" type="UInt32">16756630</value>
             </object>
             <object type="Knot">
-              <value name="Position" type="Float">0.228628</value>
+              <value name="Position" type="Float">0.21749</value>
               <value name="Color" type="UInt32">0</value>
             </object>
             <object type="Knot">
-              <value name="Position" type="Float">0.9375</value>
+              <value name="Position" type="Float">0.935417</value>
               <value name="Color" type="UInt32">0</value>
             </object>
             <object type="Knot">
-              <value name="Position" type="Float">0.979167</value>
+              <value name="Position" type="Float">0.945833</value>
               <value name="Color" type="UInt32">16756630</value>
             </object>
             <object type="Knot">
@@ -22584,7 +22584,7 @@
             </object>
             <object type="Knot">
               <value name="Value" type="Vector4">
-                <x>0.979167</x>
+                <x>0.945833</x>
                 <y>0.8</y>
                 <z>0</z>
                 <w>0</w>

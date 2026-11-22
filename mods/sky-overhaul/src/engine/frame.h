@@ -40,9 +40,10 @@ using PassFn = void (*)(const Pass&);
 
 // Takes over the engine device's EndScene. Call once from FCSE_Load. `onScenePass` runs on each of
 // the frame's scene passes, with the scene's own target and depth still bound; `onFinalPass` runs
-// once on the composite, with the back buffer bound and the user interface not yet drawn. False
-// means the frame cannot be followed, which it logs, and nothing is left hooked.
-bool Install(PassFn onScenePass, PassFn onFinalPass);
+// once on the composite, with the back buffer bound and the user interface not yet drawn;
+// `onOffscreenPass` on each pass into a target of another size, the shadow maps among them, with the
+// frame they are drawn for. False means the frame cannot be followed, which it logs, and nothing is left hooked.
+bool Install(PassFn onScenePass, PassFn onFinalPass, PassFn onOffscreenPass);
 
 // How many passes have ended so far. What a draw is in the middle of belongs to the pass that has
 // not ended yet, so this is the only thing that says two draws are in the same one - and a frame

@@ -1,7 +1,8 @@
 // The sky, drawn in place of the engine's own dome.
 //
 // The clouds are drawn over a finished pass; this is drawn inside one, where the dome's own draw
-// was dropped. So it inherits the dome's state rather than setting any: depth tested against the
+// was dropped, or at the pass's end once the night is full and the engine draws no dome. So it
+// inherits the dome's state rather than setting any: depth tested against the
 // world and not written, no culling, and blended source alpha over one minus source alpha. That
 // blend is straight rather than premultiplied - the opposite of the cloud layer's convention - so
 // the colour here is the sky's own and the alpha is how much of it covers what was drawn behind.
@@ -108,8 +109,14 @@
 // drawing them at zero, so they fade in that stretch rather than vanish at once.
 #define STARS_FADE 0.02f
 
-// How much of the stars and the Milky Way the night sky covers at least, its colour over theirs.
+// How much of the stars and the Milky Way the night sky covers at least, its colour over theirs,
+// and how much of what is left a fully milky sky hides as well.
 #define STARS_COVER 0.5f
+#define STARS_MILK 0.67f
+// The heights, as sines, between which the stars and the Milky Way come through the air low down:
+// none below fifteen degrees, all by forty.
+#define STARS_LOWEST 0.259f
+#define STARS_ALL 0.643f
 
 // The moon draws before the sky as the stars do, so that cover leaves it alone: the cosines of the
 // angles from its centre where the cover starts to give way and where it is gone.
@@ -157,6 +164,13 @@ float4 Fill : register(c77);
 
 // xyz: the direction of the moon, pointing at it.
 float4 Moon : register(c78);
+
+// x: how milky haze through the whole air makes the sky. y: how far the weather's fog is close
+// enough to swallow the land before the horizon, so that sky and land meet in one veil there.
+float4 Milk : register(c79);
+
+// How much of a milky sky's paling reaches the zenith, against all of it at the horizon.
+#define MILK_ZENITH 0.35f
 
 // The air's colour by direction, drawn once a frame by TablePS. Across: the heading's angle from the
 // sun's, nought to pi, since the air scatters alike either side of the sun. Down: the square root of
@@ -278,10 +292,17 @@ float3 FogAlong(float2 heading) {
     return FogColour.rgb + FogColourRange.rgb * angle;
 }
 
-// The land past the drawn world's edge along a heading: earth, a little into the haze.
+// What the horizon meets along a heading.
+float3 HorizonAlong(float2 heading) {
+    return Veiled(FogAlong(heading), Milk.y);
+}
+
+// The land past the drawn world's edge along a heading: earth, a little into the haze, and only the
+// fog's colour as far as the weather's fog swallows it.
 float3 Land(float2 heading) {
-    float3 fog = FogAlong(heading);
-    return Fill.w * lerp(dot(fog, LUMA) * EARTH_BRIGHTNESS * GROUND_HUE, fog, Fill.z);
+    float3 fog = HorizonAlong(heading);
+    float3 earth = Fill.w * lerp(dot(fog, LUMA) * EARTH_BRIGHTNESS * GROUND_HUE, fog, Fill.z);
+    return lerp(earth, fog, Milk.y);
 }
 
 // How far a heading belongs to the far side of the sun: nothing at the sun's own heading, half at a
@@ -371,8 +392,16 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     // Where the sky ends up at the horizon: the engine's own fog colour along this heading.
     float fog = pow(below, HORIZON_FALLOFF);
-    colour = lerp(colour, FogAlong(heading), fog);
+    colour = lerp(colour, HorizonAlong(heading), fog);
     colour = TurnFromSun(colour, below, turn);
+
+    // Haze through the whole air pales the sky toward the horizon's brightness in the haze's hue, the
+    // horizon most and the zenith a little. That brightness is the skyline's across from the sun, so
+    // a low sun's glow is not spread over its whole half of the sky.
+    float3 skyline = tex2Dlod(SkyTable, float4(0.5f, 0.0f, 0.0f, 0.0f)).rgb;
+    float3 hazeFog = FogAlong(heading);
+    float3 hazeHue = min(hazeFog / max(dot(hazeFog, LUMA), 0.0001f), 3.0f);
+    colour = lerp(colour, dot(skyline, LUMA) * hazeHue, Milk.x * lerp(MILK_ZENITH, 1.0f, below));
 
     // What shows below that horizon is ground the world never drew, so it turns from the sky's
     // colour toward earth's the further down the eye goes, at the brightness the horizon already has.
@@ -399,8 +428,10 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // opaque.
     float luminance = dot(colour, LUMA);
     float nearMoon = smoothstep(MOON_CLEAR_EDGE, MOON_CLEAR_FULL, dot(ray, Moon.xyz));
+    float starsCover = 1.0f - (1.0f - STARS_COVER) * (1.0f - STARS_MILK * Milk.x) *
+                              smoothstep(STARS_LOWEST, STARS_ALL, ray.z);
     float alpha = saturate(max(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f,
-                               STARS_COVER * (1.0f - nearMoon)));
+                               starsCover * (1.0f - nearMoon)));
     alpha = lerp(alpha, 1.0f, filled);
     return Output(colour, alpha, screen);
 }

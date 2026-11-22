@@ -26,6 +26,10 @@ bool DrawMask(IDirect3DDevice9* device);
 // the clouds' noise and its sampling bound. False while no clouds are being drawn.
 bool DrawShadow(IDirect3DDevice9* device);
 
+// One texel holding the sunlight the clouds drawn this pass let through to the eye, colour and
+// brightness as they light the clouds with. Null while no clouds are being drawn or the sun is down.
+IDirect3DTexture9* Sunlit(const Frame::Pass& pass, const float sun[3]);
+
 // Surrenders what belongs to the device, before it is reset.
 void ReleaseDeviceObjects();
 

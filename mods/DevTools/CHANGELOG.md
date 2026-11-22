@@ -6,6 +6,10 @@ Notable changes to DevTools, loosely following
 ## [Unreleased]
 
 ### Added
+- **Weather tab** for Sky Overhaul's weather: a button for each weather to hold it in place of the
+  timeline, a storm cell put overhead or upwind, and the weather overhead, what it is turning into,
+  its rain, wind and fog, and how near its storm cells are. A page added in a later version shows
+  as it would on a new install, even with pins saved before it.
 - **The DLC's guns in the Armory**: the silenced shotgun, the sawed-off shotgun and the crossbow.
 - **Session log**, off unless launched with `-perftest`: every frame of a session, its
   time, GPU time, whether the player is in play and in a vehicle, and a once-a-second CPU, memory and

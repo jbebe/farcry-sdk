@@ -7,8 +7,6 @@
 
 #include <d3d9.h>
 
-#include <cstdint>
-
 namespace SkyOverhaul::Noise {
 
 // Begins generating. Call once from FCSE_Load.
@@ -27,9 +25,6 @@ IDirect3DTexture9* Weather();
 // Three independent fields in red, green and blue for the heat haze, each flat within a cell and
 // quick between them, repeating every 16 cells across the volume on every axis.
 IDirect3DVolumeTexture9* Turbulence();
-
-// A number from 0 to 1 that depends only on its arguments, from the hash the noise is made with.
-float Random(int x, int y, int z, uint32_t seed);
 
 void ReleaseDeviceObjects();
 

@@ -7,25 +7,36 @@
 
 #include "clouds.h"
 #include "dazzle.h"
+#include "engine/camera.h"
 #include "engine/cloud_layer.h"
 #include "engine/depth_texture.h"
 #include "engine/device_reset.h"
+#include "engine/environment.h"
 #include "engine/frame_copy.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
+#include "engine/linear_depth.h"
+#include "engine/rain_component.h"
+#include "engine/rain_cover.h"
 #include "engine/screen_draw.h"
 #include "engine/solid_depth.h"
 #include "flatten.h"
 #include "foliage.h"
+#include "ground.h"
+#include "lightning.h"
 #include "grade.h"
 #include "grain.h"
 #include "haze.h"
 #include "night.h"
 #include "occlusion.h"
+#include "rain.h"
+#include "rainbow.h"
+#include "ripples.h"
 #include "shadows.h"
 #include "sky.h"
 #include "sun_shadows.h"
 #include "tuning.h"
+#include "weather/weather.h"
 
 #include <iterator>
 
@@ -45,17 +56,30 @@ namespace {
         SkyOverhaul::Grain::ReleaseDeviceObjects();
         SkyOverhaul::Haze::ReleaseDeviceObjects();
         SkyOverhaul::Flatten::ReleaseDeviceObjects();
+        SkyOverhaul::Rain::ReleaseDeviceObjects();
+        SkyOverhaul::Ground::ReleaseDeviceObjects();
+        SkyOverhaul::Ripples::ReleaseDeviceObjects();
+        SkyOverhaul::Lightning::ReleaseDeviceObjects();
+        SkyOverhaul::Rainbow::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
 
     // Each effect decides for itself whether the pass is one it wants. The sky has already drawn
     // itself from inside the pass by the time this runs.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::Camera::View view;
+        if (pass.sky && pass.live && SkyOverhaul::Camera::Read(pass.device, view)) {
+            SkyOverhaul::Weather::SetEye(view.eye, view.direction);
+        }
         SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
+        SkyOverhaul::Rainbow::OnScenePass(pass);
         SkyOverhaul::Shadows::OnScenePass(pass);
         SkyOverhaul::SolidDepth::OnScenePass(pass);
         SkyOverhaul::Occlusion::OnScenePass(pass);
+        SkyOverhaul::Ground::OnScenePass(pass);
+        SkyOverhaul::Rain::OnScenePass(pass);
+        SkyOverhaul::Lightning::OnScenePass(pass);
         SkyOverhaul::Haze::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
@@ -131,6 +155,16 @@ namespace {
     void __cdecl OnSunShadowsChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::SunShadows::SetEnabled(value->asChoice == 1);
     }
+
+    void __cdecl OnWeatherChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Weather::SetEnabled(value->asChoice == 1);
+        SkyOverhaul::Lightning::SetEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnRainChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Rain::SetEnabled(value->asChoice == 1);
+        SkyOverhaul::Ground::SetEnabled(value->asChoice == 1);
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -149,8 +183,12 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // installed without the seam that follows the frame and the one that lets go before a reset:
     // a plugin holding a render target through a reset would break the reset itself.
     if (SkyOverhaul::DeviceReset::Install(&OnDeviceRelease) &&
-        SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass)) {
+        SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass,
+                                    &SkyOverhaul::RainCover::OnOffscreenPass)) {
         SkyOverhaul::Clouds::Install();
+        SkyOverhaul::RainComponent::Install();
+        // Read by the wet ground, where its eight-bit steps drew lines across grass.
+        SkyOverhaul::LinearDepth::Install();
         // Watches the draws inside a pass rather than the passes themselves, because that is where
         // the dome is and a sky has to go under everything drawn after it.
         SkyOverhaul::Sky::Install();
@@ -160,6 +198,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // the cloud layer is lit by them.
     SkyOverhaul::CloudLayer::Install();
     SkyOverhaul::SunShadows::Install();
+    SkyOverhaul::Environment::Install();
+    SkyOverhaul::Lightning::Install();
 
     // Before any engine code runs, so the first frame already draws with the stored values.
     SkyOverhaul::Tuning::Load();
@@ -183,6 +223,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
         {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},
         {"Sun shadows", FCSE_CHOICE(1), &OnSunShadowsChanged, nullptr, kModes, std::size(kModes)},
+        {"Weather", FCSE_CHOICE(1), &OnWeatherChanged, nullptr, kModes, std::size(kModes)},
+        {"Rain", FCSE_CHOICE(1), &OnRainChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

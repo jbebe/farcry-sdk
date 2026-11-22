@@ -22,8 +22,12 @@
 // and there is no depth for any of it to be lost in.
 #define CIRRUS_ALBEDO 1.1f
 
-// How tightly the glow around the moon hugs it: a seventh of it is left ten degrees out.
-#define MOON_GLOW_FORWARD 0.9f
+// How tightly the corona around the moon hugs it: a tenth of its brightness at the disc's edge is
+// left five degrees out. The cosines of the angle off the moon's centre where it starts, at the
+// disc's edge 1.75 degrees out, and where it is full.
+#define MOON_GLOW_FORWARD 0.97f
+#define MOON_DISC_EDGE 0.999534f
+#define MOON_CORONA_FULL 0.999391f
 
 // How many aircraft trails a day can hold.
 #define TRAIL_COUNT 3
@@ -67,6 +71,25 @@ sampler3D ShapeNoise : register(s0);
 sampler3D DetailNoise : register(s1);
 sampler2D WeatherMap : register(s2);
 
+// The weather's cells over the map, as cell_map.cpp draws them: r how much of the layer they fill,
+// g how tall they stand, b how dark and wet they are, a their anvils. The map is 40960 m square
+// round the middle of the campaign world.
+sampler2D CellMap : register(s5);
+#define CELL_MAP_SCALE (1.0f / 40960.0f)
+#define CELL_MAP_OFFSET 0.4375f
+// How solid a cell at its wettest is, how dark its base, how much sunlight its depth leaves its
+// underside, how far over the sky its anvil's ice reaches and how solid that is, how much of the
+// sky it fills where the weather map is empty, and how much its raining heart fills at least.
+#define CELL_DENSITY 0.04f
+#define CELL_SHADE 0.85f
+#define CELL_SUN 0.4f
+#define CELL_ANVIL_REACH 0.7f
+#define CELL_ANVIL 0.35f
+// How many times finer than the sheet an anvil's ice is torn.
+#define CELL_ANVIL_GRAIN 5.0f
+#define CELL_FILL 0.3f
+#define CELL_CORE 0.85f
+
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
 // x: the layer's floor. y: how deep it is. z: how much of the sky it fills. w: how solid it is.
@@ -83,8 +106,11 @@ float4 LightColour : register(c76);
 // rgb: what the sky and ground light the cloud with from every other direction. w: how much of that
 // a storm takes away at the layer's base, less toward its top.
 float4 AmbientColour : register(c77);
-// rgb: what reaches the eye through a thin edge, which is what makes a silver lining.
+// rgb: what reaches the eye through a thin edge, which is what makes a silver lining. w: how wide a
+// half-resolution pixel is, in radians.
 float4 BackColour : register(c78);
+// How many texels one repeat of the shape noise spans.
+#define SHAPE_TEXELS 128.0f
 // x: how far out clouds are drawn. y: over what distance they fade to nothing before that.
 // z: how far the march itself runs, the rest being left to the haze. w: over how far a cloud
 // turns into that haze.
@@ -103,8 +129,23 @@ float4 MoonGlow : register(c87);
 // along that, in the units the sheet is read in. w: the seed that tears it up, or nought for no trail.
 float4 Trails[TRAIL_COUNT] : register(c88);
 
+// Lightning in the cloud: xyz where the strike is, w how bright, for the two brightest now.
+float4 Flash[2] : register(c96);
+// How far through a cloud a strike's light reaches before a third of it is left, and its colour.
+#define FLASH_REACH 900.0f
+#define FLASH_COLOUR float3(0.82f, 0.88f, 1.0f)
+
+float3 Flashes(float3 at) {
+    float glow = 0.0f;
+    [unroll] for (int i = 0; i < 2; i++) {
+        glow += Flash[i].w * exp(-length(at - Flash[i].xyz) / FLASH_REACH);
+    }
+    return FLASH_COLOUR * glow;
+}
+
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
-// does. See docs/docs/engine-internals/sky-and-clouds.md.
+// does. See docs/docs/engine-internals/sky-and-clouds.md. FogColour.w is ours: how far the weather's
+// fog swallows the land before the horizon, as Veiled takes it.
 float4 FogColour : register(c80);
 float4 FogColourRange : register(c81);
 float4 FogValues : register(c82);
@@ -126,6 +167,10 @@ float HeightProfile(float height, float tallness) {
     return base * crown * crown;
 }
 
+float4 CellAt(float2 world) {
+    return tex2Dlod(CellMap, float4(world * CELL_MAP_SCALE + CELL_MAP_OFFSET, 0.0f, 0.0f));
+}
+
 // How much cloud stands at a point. `cheap` skips the erosion, which is most of the cost and none
 // of the shape, and is what the samples toward the light use.
 float Density(float3 world, uniform bool cheap) {
@@ -133,8 +178,14 @@ float Density(float3 world, uniform bool cheap) {
 
     float2 weatherUv = (world.xy + Wind.zw) * Grain.z;
     float3 weather = tex2Dlod(WeatherMap, float4(weatherUv, 0.0f, 0.0f)).rgb;
+    float4 cell = CellAt(world.xy);
     // Half is neutral, so the slider opens the sky out from the map or closes it down to nothing.
-    float cloudiness = saturate(weather.b + Layer.z * 2.0f - 1.0f);
+    // A cell fills the sky toward a crowd of towers, whose edges the shape below still carves, and
+    // closes it over its raining heart.
+    float cloudiness = saturate(max(lerp(weather.b + Layer.z * 2.0f - 1.0f,
+                                         CELL_FILL + 0.5f * weather.b, cell.r),
+                                    CELL_CORE * cell.b));
+    float solid = max(Layer.w, CELL_DENSITY * cell.b);
 
     // The layer is a few hundred metres deep and the shape repeats over thousands, so read across
     // it far faster than along it. Sampled at one scale in all three axes, a layer this thin cuts
@@ -146,12 +197,12 @@ float Density(float3 world, uniform bool cheap) {
     // Three frequencies of billow, folded into one field, then used to carve the fourth.
     float billow = shape.g * 0.625f + shape.b * 0.25f + shape.a * 0.125f;
     float body = saturate(Remap(shape.r, billow - 1.0f, 1.0f, 0.0f, 1.0f));
-    body *= HeightProfile(height, weather.r);
+    body *= HeightProfile(height, max(weather.r, cell.g));
 
     float density = saturate(Remap(body, 1.0f - cloudiness, 1.0f, 0.0f, 1.0f));
 
     if (cheap || density <= 0.0f) {
-        return density * Layer.w;
+        return density * solid;
     }
 
     // Wispy at the base and billowy above it, which is how a real cloud's edge tears.
@@ -159,7 +210,7 @@ float Density(float3 world, uniform bool cheap) {
     float fine = detail.r * 0.625f + detail.g * 0.25f + detail.b * 0.125f;
     float erosion = lerp(1.0f - fine, fine, saturate(height * 4.0f));
     density = saturate(Remap(density, erosion * Grain.w, 1.0f, 0.0f, 1.0f));
-    return density * Layer.w;
+    return density * solid;
 }
 
 // Whether the light is still above the horizon as seen from this height, from one in full view to
@@ -246,16 +297,32 @@ float Contrail(float2 at, float3 path, float seed) {
 float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     cover = 0.0f;
     float rise = Cirrus.x - Eye.z;
-    if (ray.z <= 0.02f || rise <= 0.0f || Cirrus.z <= 0.0f) {
+    if (ray.z <= 0.02f || rise <= 0.0f) {
         return 0.0f;
     }
 
+    // A cell's anvil spreads the sheet over it, as far and as solid as the anvil has grown.
     float travel = rise / ray.z;
-    float2 overhead = (Eye.xy + ray.xy * travel) * Cirrus.y;
+    float2 below = Eye.xy + ray.xy * travel;
+    float anvil = CellAt(below).a;
+    if (Cirrus.z <= 0.0f && anvil <= 0.0f) {
+        return 0.0f;
+    }
+    float2 overhead = below * Cirrus.y;
     float2 at = overhead + Wind.xy * 2.5f * Cirrus.y;
 
-    float field = tex3Dlod(ShapeNoise, float4(at, 0.37f, 0.0f)).r;
+    // Read as blurred as a pixel's footprint along the sheet is wide, so far out it evens into a
+    // haze rather than its repeats beating into stripes.
+    float footprint = BackColour.w * travel / ray.z * Cirrus.y * SHAPE_TEXELS;
+    float lod = log2(max(footprint, 1.0f));
+    float field = tex3Dlod(ShapeNoise, float4(at, 0.37f, lod)).r;
     cover = saturate(Remap(field, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f)) * Cirrus.w;
+    if (anvil > 0.0f) {
+        float torn =
+            tex3Dlod(ShapeNoise, float4(at * CELL_ANVIL_GRAIN, 0.53f, lod + log2(CELL_ANVIL_GRAIN))).r;
+        float ice = saturate(Remap(torn, 1.0f - anvil * CELL_ANVIL_REACH, 1.0f, 0.0f, 1.0f));
+        cover = max(cover, ice * anvil * CELL_ANVIL);
+    }
 
     // Added rather than blended in, because a trail is ice laid on top of whatever sky was already
     // there and does not care how much cirrus it crosses. They stay over the world, not the wind.
@@ -297,12 +364,13 @@ float LightReach(float3 world) {
     return exp(-depth * LightColour.w);
 }
 
-// The glow of the air around the moon along a ray: all of it against the disc, falling away the
-// way a forward-scattering lobe does.
+// The glow of the air around the moon along a ray: none on the disc, so its face stays its own,
+// then falling away the way a forward-scattering lobe does.
 float3 MoonHalo(float cosAngle) {
     float g = MOON_GLOW_FORWARD;
-    float falloff = (1.0f - g) * (1.0f - g) / max(1.0f + g * g - 2.0f * g * cosAngle, 0.0001f);
-    return MoonGlow.rgb * pow(falloff, 1.5f);
+    float falloff = (1.0f - g) * (1.0f - g) / max(1.0f + g * g - 2.0f * g * cosAngle, 1e-6f);
+    return MoonGlow.rgb * pow(falloff, 1.5f) *
+           (1.0f - smoothstep(MOON_CORONA_FULL, MOON_DISC_EDGE, cosAngle));
 }
 
 // Where a ray is inside the layer: how far out it enters, how far apart the march's samples are, and
@@ -348,7 +416,7 @@ float4 March(float3 rayIn, float2 screen) {
     // it. Worked out before either layer, because both fade into it.
     float fogHeading =
         acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / PI;
-    float3 horizon = FogColour.rgb + FogColourRange.rgb * fogHeading;
+    float3 horizon = Veiled(FogColour.rgb + FogColourRange.rgb * fogHeading, FogColour.w);
 
     float cirrusCover = 0.0f;
     float3 cirrus = HighCloud(ray, cosAngle, horizon, cirrusCover);
@@ -372,10 +440,14 @@ float4 March(float3 rayIn, float2 screen) {
             float powder = 1.0f - exp(-density * 8.0f);
             float thin = lerp(1.0f, powder, saturate(cosAngle));
 
+            // A cell stands far deeper than the layer, which the light reaching its base makes up for.
             float height = saturate((at.z - Layer.x) / Layer.y);
+            float water = CellAt(at.xy).b;
+            float shade = max(AmbientColour.w, CELL_SHADE * water);
             float3 light = (Scatter(lit, lobes) * thin +
-                            BackColour.rgb * lit * saturate(-cosAngle)) * above +
-                           AmbientColour.rgb * lerp(1.0f - AmbientColour.w, 1.0f, height);
+                            BackColour.rgb * lit * saturate(-cosAngle)) * above *
+                               lerp(1.0f, CELL_SUN, water * (1.0f - height)) +
+                           AmbientColour.rgb * lerp(1.0f - shade, 1.0f, height) + Flashes(at);
 
             float transmit = exp(-density * stride);
             scattered += light * transmittance * (1.0f - transmit);
@@ -476,6 +548,12 @@ float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float dither = Dither(screen);
     clip(dither - Cover(rayIn, dither, false));
     return 0.0f;
+}
+
+// The light that reaches the eye along a ray, which a target of one texel takes toward the sun for
+// the rainbow.
+float4 SunlitPS(float3 rayIn : TEXCOORD0) : COLOR0 {
+    return float4(LightColour.rgb * (1.0f - Cover(rayIn, 0.5f, true)), 1.0f);
 }
 
 // What the clouds and the land cover of a pixel's ray, for the god-ray mask to be multiplied down by,

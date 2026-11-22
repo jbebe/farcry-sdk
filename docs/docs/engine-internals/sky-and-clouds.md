@@ -300,8 +300,11 @@ dusk and night.
 :::
 
 The dome reaches the device as **one indexed triangle strip of 714 vertices and 1450 triangles**,
-stride 16 from index 0, drawn once per sky pass at every hour. No other draw in the sky pass shares
-those counts. It draws through the sky pass's viewport (`MinZ` 0.999) with the depth test on at
+stride 16 from index 0, drawn once per sky pass at every hour until the night is full. No other
+draw in the sky pass shares those counts. Once the night is full the sky pass draws no dome at all,
+only the star sphere: three draws of one 10,320-vertex mesh, a backdrop of 224 triangles that
+replaces what is behind it and 48 and 3,376 triangles of stars blended `One` over `One`, then the
+moon (seen in game, GOG v1.03, a clear night at 01:30). It draws through the sky pass's viewport (`MinZ` 0.999) with the depth test on at
 `LESSEQUAL`, depth writes off and culling off.
 
 It blends `SrcAlpha` over `InvSrcAlpha` **at every hour, noon included**, so the `OPAQUE`

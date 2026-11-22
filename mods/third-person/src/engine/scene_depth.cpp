@@ -57,7 +57,8 @@ IDirect3DTexture9* ThirdPerson::SceneDepth::Texture(UINT width, UINT height) {
     }
     auto* texture = static_cast<IDirect3DTexture9*>(base);
     D3DSURFACE_DESC desc = {};
-    const bool scene = SUCCEEDED(texture->GetLevelDesc(0, &desc)) && desc.Format == D3DFMT_A8R8G8B8 &&
+    const bool scene = SUCCEEDED(texture->GetLevelDesc(0, &desc)) &&
+                       (desc.Format == D3DFMT_A8R8G8B8 || desc.Format == D3DFMT_A16B16G16R16F) &&
                        (desc.Usage & D3DUSAGE_RENDERTARGET) != 0 && desc.Width == width &&
                        desc.Height == height;
     return scene ? texture : nullptr;

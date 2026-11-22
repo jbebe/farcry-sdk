@@ -46,3 +46,4 @@ Stage: active
 - 0x0071AE70: stacks - the input dispatcher every mod with a control mid-hooks; FCSE stacks same-address hooks
 - 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks
 - 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
+- sky-overhaul: fixed by Sky's half-float linear depth together with this lookup accepting it - Sky stores the engine's linear depth in A16B16G16R16F, the same packing; SceneDepth accepted only A8R8G8B8

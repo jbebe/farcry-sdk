@@ -19,7 +19,8 @@ namespace {
                           SUCCEEDED(device->GetRenderTarget(0, &surface)) && surface != nullptr &&
                           SUCCEEDED(surface->GetDesc(&target));
         SkyOverhaul::Release(surface);
-        return read && desc.Format == D3DFMT_A8R8G8B8 && (desc.Usage & D3DUSAGE_RENDERTARGET) != 0 &&
+        return read && (desc.Format == D3DFMT_A8R8G8B8 || desc.Format == D3DFMT_A16B16G16R16F) &&
+               (desc.Usage & D3DUSAGE_RENDERTARGET) != 0 &&
                desc.Width == target.Width && desc.Height == target.Height;
     }
 }

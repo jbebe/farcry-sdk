@@ -20,6 +20,7 @@ namespace {
     EndSceneFn g_originalEndScene = nullptr;
     SkyOverhaul::Frame::PassFn g_onScenePass = nullptr;
     SkyOverhaul::Frame::PassFn g_onFinalPass = nullptr;
+    SkyOverhaul::Frame::PassFn g_onOffscreenPass = nullptr;
 
     // The first scene pass opens a frame and the composite closes it. Every scene pass between the
     // two belongs to the frame already open.
@@ -78,6 +79,7 @@ namespace {
 
         bool runScene = false;
         bool runFinal = false;
+        const bool runOffscreen = !sceneSized && !toBackBuffer;
         if (scene) {
             if (g_state == State::AwaitingScene) {
                 const uint32_t submitCount = SkyOverhaul::CloudLayer::SubmitCount();
@@ -92,7 +94,7 @@ namespace {
             g_state = State::AwaitingScene;
         }
 
-        if (!runScene && !runFinal) {
+        if (!runScene && !runFinal && !runOffscreen) {
             return;
         }
 
@@ -107,7 +109,8 @@ namespace {
         pass.depth = depth.surface;
         pass.backBuffer = backBufferDesc;
         pass.viewport = viewport;
-        pass.frame = g_frame;
+        // The shadow maps are drawn before the first scene pass opens the frame they belong to.
+        pass.frame = runOffscreen && g_state == State::AwaitingScene ? g_frame + 1 : g_frame;
         pass.live = g_live;
         pass.sky = runScene && viewport.MinZ >= SkyOverhaul::Frame::kSkyPassMinZ &&
                    g_skyFrame != g_frame;
@@ -121,6 +124,9 @@ namespace {
         if (runFinal && g_onFinalPass != nullptr) {
             g_onFinalPass(pass);
         }
+        if (runOffscreen && g_onOffscreenPass != nullptr) {
+            g_onOffscreenPass(pass);
+        }
     }
 
     HRESULT __fastcall EndSceneDetour(void* self) {
@@ -133,7 +139,7 @@ namespace {
 
 }
 
-bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
+bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass, PassFn onOffscreenPass) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
     if (!g_endScene) {
@@ -150,6 +156,7 @@ bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
 
     g_onScenePass = onScenePass;
     g_onFinalPass = onFinalPass;
+    g_onOffscreenPass = onOffscreenPass;
     return true;
 }
 

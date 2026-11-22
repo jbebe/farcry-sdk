@@ -10,7 +10,8 @@
 // what it lets through, so that the mask follows our clouds rather than the engine's, and draws the
 // moon without the fog the engine hides a low moon in.
 //
-// It also watches the draws named by their shaders, non-indexed ones too, for the effects below.
+// It also watches the draws named by their shaders, non-indexed ones too, for the effects below,
+// and drops the leaves' draws into the engine's rain cover map, so the rain comes through trees.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
@@ -41,6 +42,10 @@ bool Install(SubstituteFn substitute);
 // Takes effect on the next draw.
 void SetMode(Mode mode);
 
+// Whether the pass now ending drew the star sphere and no dome, as the engine does once the night is
+// full, so the sky has still to go over the stars.
+bool SkyOwed();
+
 // Draws in place of the god-ray mask's cloud draw, with the device set as that draw found it. True
 // means it drew, and the engine's draw is dropped.
 void SetMaskSubstitute(SubstituteFn mask);
@@ -50,9 +55,27 @@ void SetMaskSubstitute(SubstituteFn mask);
 using GradeFn = void (*)(const float engine[12], float out[12]);
 void SetGrade(GradeFn grade);
 
+// The engine's registers a shine change put other values in, and the texture it put another in
+// place of, to be put back after the draw.
+constexpr int kShineSaved = 16;
+struct ShineSaved {
+    int count;
+    UINT registers[kShineSaved];
+    float values[kShineSaved][4];
+    // Null unless a texture was replaced; holds a reference until it is put back.
+    IDirect3DBaseTexture9* texture;
+    DWORD sampler;
+};
+
+// Changes a material's shine for its draw, through the registers its pixel shader reads it from
+// (KnownShaders::Known::shine), recording in `saved` each register and texture it changed with the
+// engine's own; a count of nought and no texture leaves the draw as it is.
+using ShineFn = void (*)(IDirect3DDevice9* device, const uint8_t* shine, ShineSaved& saved);
+void SetShine(ShineFn shine);
+
 // The effects that read the linear depth; the draws that read it are watched for its texture while
 // any of them wants it.
-enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4, Clouds = 8 };
+enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4, Clouds = 8, Rain = 16 };
 
 void SetWatchDepth(DepthUser user, bool watch);
 

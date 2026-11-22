@@ -8,6 +8,7 @@
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "tuning.h"
+#include "weather/weather.h"
 
 #include "night_ps.h"
 
@@ -53,10 +54,11 @@ namespace {
         gate.dusk = std::clamp((lighting.sunDirection[2] - kDuskBegins) / (kDuskEnds - kDuskBegins),
                                0.0f, 1.0f);
 
-        // A storm's cloud keeps the moon's light off the ground as it keeps the sun's.
-        const float storminess = SkyOverhaul::SkyModel::Storminess(lighting.storm);
+        // A storm's cloud keeps the moon's light off the ground as it keeps the sun's, and the
+        // weather's clouds keep off what they cover.
+        const SkyOverhaul::Weather::Air air = SkyOverhaul::Weather::AirNow(lighting.storm);
         gate.moonlight = SkyOverhaul::SkyModel::MoonRise(lighting.moonDirection[2]) *
-                         SkyOverhaul::SkyModel::SunShare(storminess);
+                         SkyOverhaul::SkyModel::SunShare(air.storminess) * (1.0f - air.cover);
 
         gate.drive = v.nightStrength * gate.dusk;
         gate.drain = gate.drive * (1.0f - v.nightMoonColour * gate.moonlight);

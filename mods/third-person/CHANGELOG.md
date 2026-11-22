@@ -3,6 +3,12 @@
 Notable changes to Third Person, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Works with the next Sky Overhaul.** It stores the game's depth image in half floats, which this
+  mod's depth lookup turned away, leaving it without the scene's depth.
+
 ## [1.0.1] - 2026-11-17
 
 ### Changed

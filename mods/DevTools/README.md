@@ -199,10 +199,11 @@ command queues it for the engine's next frame, so the click and the command are 
 thread as each other.
 
 There are more pages than fit across the window, so only the ones you pin stay as tabs: Armory,
-Spawner, Range, Lua and Diagnostics to begin with. **More**, at the row's end, lists every page. Click
-a name to open it, or tick its box to pin or hide it. A page you open without pinning gets a tab of
-its own until you move to another. The pins are saved in `bin\DevTools-config.ini`, because FCSE's own
-settings can only be changed from the Mod Configuration Menu.
+Spawner, Range, Lua, Diagnostics and Weather to begin with. **More**, at the row's end, lists every
+page. Click a name to open it, or tick its box to pin or hide it. A page you open without pinning gets
+a tab of its own until you move to another. The pins are saved in `bin\DevTools-config.ini`, because
+FCSE's own settings can only be changed from the Mod Configuration Menu, with every page there was at
+the time, so a page added in a later version starts pinned or not as it would on a new install.
 
 The Environment tab puts the clock and the weather above its commands. Storm, rain and wind each
 offer Engine, Off, and a way to force them: a storm strength, rain on, a wind speed and direction.
@@ -211,6 +212,13 @@ storm's curve and override, the cloud cover rain is rolled against and when it r
 force and direction. The forces are written into the environment manager on every engine frame
 rather than sent as console lines, and nothing is saved: each launch starts with the engine's own
 weather.
+
+The Weather tab is Sky Overhaul's weather, and says it needs Sky Overhaul without it. A button for
+each of its weathers, a line of them per family, holds that one in place of the timeline, and
+**Timeline** lets it run again; the one in force is lit. Below them, buttons put a storm cell overhead
+or 6 km upwind to drift over, or take it away, and under those is the weather overhead, what it is
+turning into and when, and how near its storm cells are. Storm, rain and wind forced on the
+Environment tab still win.
 
 Other plugins can add windows of their own. Each time Home opens the overlay, the open windows are
 laid out side by side — DevTools' first, then the rest in the order they were added — and after that
@@ -460,6 +468,8 @@ world there has loaded.
 | `setting [plugin] name = value` | Any mod's setting for this launch, spelled as in `fcse.ini`: `setting [DevTools] Infinite ammo = true`. Nothing is saved |
 | `pause on`, `pause off` | Stops the game clock, so the world stands still while frames keep coming, or starts it again |
 | `weather clear`, `weather engine` | No storm, rain or wind, or the engine's own |
+| `skyweather <id>`, `skyweather timeline` | Holds one of Sky Overhaul's weathers by its id (`C5`, `S3`), or lets its timeline run; fails without Sky Overhaul |
+| `skycell over`, `skycell ahead <m>`, `skycell upwind <m>`, `skycell <deg> <m>`, `skycell off` | Puts a Sky Overhaul storm cell overhead, ahead of the camera, upwind to drift over, or toward a heading given as the wind's; `off` takes it away; fails without Sky Overhaul |
 | `send <channel> <text>` | Hands the text to every plugin listening on that FCSE channel, as another plugin's `Send` would; fails when nobody listens. Inventory Overhaul's test window hears `inventoryoverhaul`: `give <id>`, `fill` |
 | `record`, `stoprecord <path>`, `play <path>` | See below |
 
@@ -679,9 +689,9 @@ Everything below needs a real install:
   `SpawnEntityFromArchetype` line it ran.
 - **Spawner soldiers** *(seen 2026-10-25 with squad size 1)*: in the test range, Red faction's
   Assault, Caucasian put a soldier 25 m ahead, facing you, and he opened fire at once.
-- **Tabs** *(not yet run)*: the row shows Armory, Spawner, Range, Lua and Diagnostics. More opens Cheats
-  as a sixth tab, which goes away when another tab is clicked. Ticking Cheats keeps it, and it is still
-  there after a relaunch, with `Tabs=` in `bin\DevTools-config.ini` listing it.
+- **Tabs** *(not yet run)*: the row shows Armory, Spawner, Range, Lua, Diagnostics and Weather. More
+  opens Cheats as a seventh tab, which goes away when another tab is clicked. Ticking Cheats keeps it,
+  and it is still there after a relaunch, with `Tabs=` in `bin\DevTools-config.ini` listing it.
 - **Armory** *(seen 2026-10-30)*: AK-47 draws an
   AK-47, the gun of its class lies at your feet, and the tab reads `reliability 1000 of 1000`. With
   Ammo at 35, the HUD shows 30 and 5. Firing lowers the slider. The gun lasts about 50 magazines.

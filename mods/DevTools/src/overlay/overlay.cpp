@@ -23,6 +23,7 @@
 #include "overlay/diagnostics.h"
 #include "overlay/lua_console.h"
 #include "overlay/range.h"
+#include "overlay/sky_weather.h"
 #include "overlay/spawner.h"
 
 #include "imgui.h"
@@ -67,10 +68,13 @@ namespace {
                                 {"Range", &DevTools::Range::Draw, true},
                                 {"Lua", &DevTools::LuaConsole::Draw, true},
                                 {"Diagnostics", &DevTools::Diagnostics::Draw, true},
+                                {"Weather", &DevTools::SkyWeather::Draw, true},
                                 {kAllTab, nullptr}};
 
     // The config file's line of pinned tabs.
     constexpr std::string_view kPinsKey = "Tabs=";
+    // The config file's line of every tab when it was saved; a tab missing from it keeps its default.
+    constexpr std::string_view kKnownKey = "Known=";
 
     constexpr size_t kHistoryMax = 12;
 
@@ -256,27 +260,38 @@ namespace {
     }
 
     void LoadPins() {
+        std::string pins;
+        std::string known;
         std::ifstream file(ConfigFile());
         for (std::string line; std::getline(file, line);) {
             if (line.starts_with(kPinsKey)) {
-                const std::string pins = "," + line.substr(kPinsKey.size()) + ",";
-                for (Tab& tab : g_tabs) {
-                    tab.pinned = pins.find("," + std::string(tab.name) + ",") != std::string::npos;
-                }
+                pins = "," + line.substr(kPinsKey.size()) + ",";
+            } else if (line.starts_with(kKnownKey)) {
+                known = "," + line.substr(kKnownKey.size()) + ",";
+            }
+        }
+        for (Tab& tab : g_tabs) {
+            const std::string name = "," + std::string(tab.name) + ",";
+            if (pins.find(name) != std::string::npos) {
+                tab.pinned = true;
+            } else if (known.find(name) != std::string::npos) {
+                tab.pinned = false;
             }
         }
     }
 
     void SavePins() {
         std::string pins;
+        std::string known;
         for (const Tab& tab : g_tabs) {
             if (tab.pinned) {
                 pins.append(pins.empty() ? "" : ",").append(tab.name);
             }
+            known.append(known.empty() ? "" : ",").append(tab.name);
         }
 
         std::ofstream file(ConfigFile(), std::ios::trunc);
-        file << kPinsKey << pins << "\n";
+        file << kPinsKey << pins << "\n" << kKnownKey << known << "\n";
         file.close();
         if (!file) {
             FCSE::Logf("overlay: %s could not be written", ConfigFile().string().c_str());

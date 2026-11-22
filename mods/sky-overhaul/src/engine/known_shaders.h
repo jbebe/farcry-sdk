@@ -19,12 +19,40 @@ enum class Kind {
     Grade,
 };
 
+// Where a material's pixel shader reads its shine, in tools/bake_shine.py's order: a register per
+// parameter, kNoRegister where it takes none, and how many registers the terrain's detail colour
+// spans.
+enum ShineField {
+    kSpecularColorBase,
+    kSpecularColor1,
+    kSpecularPower,
+    kReflectionPower,
+    kDetailSpecularColor,
+    kDetailSpecularCount,
+    kSpecularShininess,
+    kSpecularIntensity,
+    kNormalOffsetScale,
+    kReflectionNormalOffsetScale,
+    kFresnelBias,
+    kFresnelPower,
+    kSpecularColorBaseClean,
+    kSpecularColor1Clean,
+    kSpecularColorBaseBroken,
+    kSpecularColor1Broken,
+    // The sampler water reads its waves from, for water alone.
+    kWaterNormalSampler,
+    kShineFields,
+};
+constexpr uint8_t kNoRegister = 0xFF;
+
 struct Known {
     Kind kind;
     // Where a grade's three registers start.
     UINT firstRegister;
     // The bytecode's CRC-32, or 0 if the device would not hand it over.
-    uint32_t crc;
+    uint32_t crc = 0;
+    // A material's shine registers, kShineFields of them, or null for a shader that takes none.
+    const uint8_t* shine = nullptr;
 };
 
 // What the pixel shader bound right now is. Remembered per shader, so only the first draw through

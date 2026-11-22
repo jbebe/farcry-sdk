@@ -457,6 +457,10 @@ exactly. The two have to change together, since the resolve needs them to agree.
   bumps do and noise does not.
 
 Half floats cost twice the memory of both targets: about 41 MB more at 1080p with four samples.
+Patched before the device exists, from a plugin's load, the renderer creates both targets in half
+floats from the first frame, and every engine reader works on them unchanged; a plugin that finds the
+texture by its format has to accept `D3DFMT_A16B16G16R16F` too (seen in game, GOG v1.03). Sky
+Overhaul does this, in `src/engine/linear_depth.cpp`.
 
 ### Cut-out materials
 

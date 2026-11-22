@@ -24,6 +24,19 @@ namespace {
         VertexKind kind;
     };
 
+#include "engine/shine_registers.inc"
+
+    static_assert(kShineFields == SkyOverhaul::KnownShaders::kShineFields,
+                  "tools/bake_shine.py and ShineField name the same registers");
+
+    // The shine registers of the shader with this bytecode, or null.
+    const uint8_t* ShineOf(uint32_t crc) {
+        const auto found = std::lower_bound(
+            std::begin(kShineShaders), std::end(kShineShaders), crc,
+            [](const ShineShader& shader, uint32_t wanted) { return shader.crc < wanted; });
+        return found != std::end(kShineShaders) && found->crc == crc ? found->registers : nullptr;
+    }
+
     // Every shipped D3D9 pixel shader that binds DepthVPSampler at s0, sorted.
     constexpr uint32_t kDepthReaders[] = {
         0x03D7976B, 0x04FC2DE3, 0x077933EA, 0x095348D1, 0x0A4D4E0A, 0x0D149BD2, 0x153D6420,
@@ -133,27 +146,60 @@ namespace {
             return kOther;
         }
         if (std::binary_search(std::begin(kDepthReaders), std::end(kDepthReaders), crc)) {
-            return {Kind::DepthReader, 0, crc};
+            return {Kind::DepthReader, 0, crc, ShineOf(crc)};
         }
         const auto named = std::find_if(std::begin(kNamed), std::end(kNamed),
                                         [crc](const Named& entry) { return entry.crc == crc; });
         Known known = named != std::end(kNamed) ? named->known : kOther;
         known.crc = crc;
+        known.shine = ShineOf(crc);
         return known;
     }
 
+    // Whether vs_3_0 bytecode turns grass clumps to the eye: a dp3 reading each of c32 to c34, the
+    // billboard rows only grass binds, whatever the settings built it with.
+    bool TurnsGrass(const std::vector<DWORD>& tokens) {
+        constexpr DWORD kEnd = 0x0000FFFF;
+        constexpr DWORD kComment = 0xFFFE;
+        constexpr DWORD kDp3 = 8;
+        constexpr DWORD kConstRegister = 2;
+        unsigned rows = 0;
+        size_t i = 1;
+        while (i < tokens.size() && tokens[i] != kEnd) {
+            const DWORD token = tokens[i];
+            const DWORD opcode = token & 0xFFFF;
+            const size_t length =
+                opcode == kComment ? (token >> 16) & 0x7FFF : (token >> 24) & 0x0F;
+            if (opcode == kDp3) {
+                // Past the destination, every source and any relative address it carries.
+                for (size_t j = i + 2; j <= i + length && j < tokens.size(); j++) {
+                    const DWORD source = tokens[j];
+                    const DWORD type = ((source >> 28) & 0x7) | ((source >> 8) & 0x18);
+                    const DWORD number = source & 0x7FF;
+                    if (type == kConstRegister && number >= 32 && number <= 34) {
+                        rows |= 1u << (number - 32);
+                    }
+                }
+            }
+            i += 1 + length;
+        }
+        return rows == 0x7;
+    }
+
     VertexKind ClassifyVertex(IDirect3DVertexShader9* shader) {
-        uint32_t crc = 0;
-        if (!BytecodeCrc(shader, crc)) {
+        const std::vector<DWORD> tokens = SkyOverhaul::Bytecode(shader);
+        if (tokens.empty()) {
             return VertexKind::Other;
         }
+        const uint32_t crc = FCSE::Crc32(tokens.data(), tokens.size() * sizeof(DWORD));
         const auto named =
             std::find_if(std::begin(kNamedVertex), std::end(kNamedVertex),
                          [crc](const NamedVertex& entry) { return entry.crc == crc; });
         if (named != std::end(kNamedVertex)) {
             return named->kind;
         }
-        return std::binary_search(std::begin(kFoliage), std::end(kFoliage), crc)
+        return std::binary_search(std::begin(kFoliage), std::end(kFoliage), crc) ||
+                       TurnsGrass(tokens)
                    ? VertexKind::Foliage
                    : VertexKind::Other;
     }

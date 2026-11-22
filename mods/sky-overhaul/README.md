@@ -4,7 +4,8 @@ An FCSE plugin for the sun as something the eye cannot look at: a glare that was
 frame as the player looks toward the sun, and a retinal afterimage left behind when they look away.
 
 **The layer ships two data fragments per campaign world.** The world descriptor's `<Environment>`
-halves the moon's size and points the storm's fog at the clear preset, and is otherwise retail. The
+halves the moon's size, lets the setting sun swell to twice its size rather than three times, and
+points the storm's fog at the clear preset, and is otherwise retail. The
 preset library in `managers.fcb` changes the night in the clear, jungle, storm and cloudy
 lighting: a dimmer blue-grey ambient and a brighter moon that lights the ground only once it has
 risen, so moonlit ground has shading and shadows. By day it lifts only the clear preset's ambient, up
@@ -40,7 +41,9 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   `src/night.cpp` and `src/shaders/night.fx`.
 - **The moon without the engine's fog.** The engine fogs the moon's sprite by its height, which hid
   all but a high moon in the night's near-black fog. Its one draw is recognised in the sky pass and
-  drawn with the fog amount at zero. `src/engine/dome_draw.cpp`.
+  drawn with the fog amount at zero and its brightness held to half of saturation, so its face
+  shows; the air glows faintly round the disc, not on it. `src/engine/dome_draw.cpp` and
+  `MoonHalo` in `src/shaders/clouds.fx`.
 - **Cloud shadows.** Ground under our clouds loses sunlight as they drift over it. Each patch of
   ground marches up through the cloud layer toward the sun, through the same density the clouds are
   drawn from, so a shadow is where its cloud is and moves with it. Needs Clouds on Overhaul. Worked
@@ -67,13 +70,45 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **Film grain.** Animated grain painted over the composite after the glare, under the heads-up
   display, strongest in the mid tones and changing pattern at film's 24 a second. `src/grain.cpp`
   and `src/shaders/grain.fx`.
+- **Rain in the air.** Thousands of thin streaks round the player in place of the game's dozen, in
+  three nested boxes that keep their place in the world, falling along the game's own rain at its
+  strength and streaked by the player's movement. The world hides them by its depth, and roofs by
+  the engine's own rain cover map, picked out of the frame's shadow passes, with the leaves kept
+  out of it so the rain comes through the trees. The game's drops and
+  splashes are left out; its sound and fires going out still run on its rain. `src/rain.cpp`, `src/engine/rain_component.cpp`,
+  `src/engine/rain_cover.cpp` and `src/shaders/rain.fx`.
+- **Lightning and thunder.** Strikes are born in the raining hearts of the weather's mature storm
+  cells, more in strong ones, and round the player under an air mass's own storm. Each is a few
+  flickering pulses: the cloud lit from inside round it, a third of them a jagged, branching bolt to
+  the ground, and a flash over the world weighed against the light already on it, so it whitens a
+  night and barely shows on a grey afternoon. Its thunder follows at the speed of sound: a crack
+  under 1.2 km, a roll to 5 km, a low rumble to 15 km, from three banks of four clips in the layer
+  (`soundbinary\00f90100` to `00f90300.spk`), played as an unplaced effect. They follow the Weather
+  switch. `strike <degrees or ahead> <metres> [bolt|cloud] [hold seconds]` on FCSE's `skyoverhaul`
+  channel puts one down for a test. `src/lightning.cpp`, `src/engine/sound.cpp`,
+  `src/shaders/lightning.fx`, and `tools/build_thunder.py`, which builds the banks.
+- **A rainbow after rain.** The weather says how far a bow can stand: it comes up over twelve game
+  minutes once the rain here stops and fades over the twenty after, and a held Clearing has one.
+  The sun is behind the eye whenever a bow is in view, so what reaches the eye is marched through
+  the clouds toward the sun into one texel rather than read off the sun's cover on screen. The bow
+  is a ring round the point opposite the sun, each colour at its own angle, with light inside it,
+  kept from one foot for 130 of the 180 degrees of its arc over the horizon, which foot rolled
+  afresh for each bow, added faintly over the sky and the clouds down to the skyline. Needs Clouds
+  on Overhaul and Weather on. `src/rainbow.cpp`, `src/shaders/rainbow.fx` and `SunlitPS` in
+  `src/shaders/clouds.fx`.
+- **Clouded nights.** The game's light for the hour is taken as its presets give it, and the
+  weather's clouds over the player then keep the moon's light off the ground as far as they cover
+  the sky, the night's ambient light with it, down to a third under full cloud. No night is lit
+  brighter than C6's cumulus over half the sky lets it be. A mission's own
+  lighting keeps its say, and the day is left alone. Needs Weather on. `src/engine/environment.cpp`.
 - **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
   this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
-  Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves and Sun shadows
-  (each Engine or Overhaul), and Occlusion, Grain, Heat haze and Flatten (each Off or On).
+  Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows,
+  Weather and Rain (each Engine or Overhaul), and Occlusion, Grain, Heat haze and Flatten (each Off
+  or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
   written on the first launch. The sky has only its fog and the land filled in below its horizon:
   otherwise it follows the sun alone. `src/tuning.cpp`.
@@ -119,6 +154,16 @@ patch holds only this layer afterwards, so build any other layer in the same com
 
 The first configure clones the Dear ImGui that `mods/DevTools/include/devtools_imgui.cmake` pins, so
 it needs `git`, a network connection, and `mods/DevTools` beside this folder.
+
+Two generated inputs are checked in and rebuilt only when what they come from changes:
+`tools\bake_shine.py` writes `src\engine\shine_registers.inc` from the retail shader objects, and
+`tools\build_thunder.py` writes the thunder banks from the recordings its docstring names.
+
+## Credits
+
+The thunder is cut from public-domain field recordings on Wikimedia Commons: "Thunderstorm after hot
+summer day, 17 minutes, 01 to 04 of 04" by stephan, and "Rain thunder and other noises", "Thunder and
+rain on a v" and "Rain and thunder (1)" by ezwa.
 
 ## Background
 

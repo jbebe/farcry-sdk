@@ -16,6 +16,7 @@
 #include "engine/shader.h"
 #include "engine/solid_depth.h"
 #include "tuning.h"
+#include "weather/weather.h"
 
 #include "haze_blur_ps.h"
 #include "haze_mask_ps.h"
@@ -103,10 +104,10 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
-    // Stateless: the ground is as hot as the sun is high, and a storm cools it.
+    // Stateless: the ground is as hot as the sun is high, and cloud and rain cool it.
     const float heat =
         std::clamp((lighting.sunDirection[2] - kHeatLow) / (kHeatHigh - kHeatLow), 0.0f, 1.0f) *
-        (1.0f - SkyModel::Storminess(lighting.storm));
+        Weather::AirNow(lighting.storm).heat;
     // The mirage tells bare ground from grass by the depth without it.
     SolidDepth::SetWanted(SolidDepth::User::Haze, v.mirageStrength > 0.0f);
     SolidDepth::Found solid = {};

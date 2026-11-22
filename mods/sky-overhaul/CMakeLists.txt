@@ -60,6 +60,8 @@ set(SHADER_PASSES
   "clouds.fx:CoverPS:ps_3_0:clouds_cover_ps.h:g_cloudsCoverPixelShader"
   "clouds.fx:MaskPS:ps_3_0:clouds_mask_ps.h:g_cloudsMaskPixelShader"
   "clouds.fx:ShadowPS:ps_3_0:clouds_shadow_ps.h:g_cloudsShadowPixelShader"
+  "clouds.fx:SunlitPS:ps_3_0:clouds_sunlit_ps.h:g_cloudsSunlitPixelShader"
+  "rainbow.fx:MainPS:ps_3_0:rainbow_ps.h:g_rainbowPixelShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
   "sky.fx:TablePS:ps_3_0:sky_table_ps.h:g_skyTablePixelShader"
   "sky.fx:LandPS:ps_3_0:sky_land_ps.h:g_skyLandPixelShader"
@@ -73,6 +75,11 @@ set(SHADER_PASSES
   "occlusion.fx:GtaoPS:ps_3_0:occlusion_gtao_ps.h:g_occlusionGtaoPixelShader"
   "occlusion.fx:BlurPS:ps_3_0:occlusion_blur_ps.h:g_occlusionBlurPixelShader"
   "occlusion.fx:ApplyPS:ps_3_0:occlusion_apply_ps.h:g_occlusionApplyPixelShader"
+  "ground.fx:GroundPS:ps_3_0:ground_ps.h:g_groundPixelShader"
+  "lightning.fx:BoltPS:ps_2_0:lightning_bolt_ps.h:g_lightningBoltPixelShader"
+  "rain.fx:DropsVS:vs_3_0:rain_drops_vs.h:g_rainDropsVertexShader"
+  "rain.fx:DropsPS:ps_3_0:rain_drops_ps.h:g_rainDropsPixelShader"
+  "ripples.fx:RipplesPS:ps_3_0:ripples_ps.h:g_ripplesPixelShader"
   "grass.fx:MainVS:vs_3_0:grass_vs.h:g_grassVertexShader"
   "grass.fx:CascadedVS:vs_3_0:grass_cascaded_vs.h:g_grassCascadedVertexShader"
   "leaves.fx:ShadowedVS:vs_3_0:leaves_shadowed_vs.h:g_leavesShadowedVertexShader"
@@ -114,45 +121,65 @@ endforeach()
 
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
+  "src/cell_map.cpp"
   "src/clouds.cpp"
   "src/dazzle.cpp"
   "src/flatten.cpp"
   "src/foliage.cpp"
   "src/grade.cpp"
+  "src/ground.cpp"
   "src/grain.cpp"
   "src/haze.cpp"
+  "src/lightning.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"
+  "src/rain.cpp"
+  "src/rainbow.cpp"
+  "src/ripples.cpp"
   "src/shadows.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
   "src/sun_shadows.cpp"
   "src/tuning.cpp"
+  "src/wet.cpp"
   "src/engine/blur_targets.cpp"
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
   "src/engine/depth_texture.cpp"
   "src/engine/device_reset.cpp"
   "src/engine/dome_draw.cpp"
+  "src/engine/environment.cpp"
   "src/engine/fog_tint.cpp"
   "src/engine/known_shaders.cpp"
+  "src/engine/linear_depth.cpp"
   "src/engine/locate.cpp"
   "src/engine/noise.cpp"
+  "src/engine/rain_component.cpp"
+  "src/engine/rain_cover.cpp"
   "src/engine/render_target.cpp"
   "src/engine/frame.cpp"
   "src/engine/frame_copy.cpp"
   "src/engine/screen_draw.cpp"
   "src/engine/shader.cpp"
   "src/engine/solid_depth.cpp"
+  "src/engine/sound.cpp"
   "src/engine/sun_occlusion.cpp"
   "src/engine/time_of_day.cpp"
   "src/engine/vertex_patch.cpp"
+  "src/weather/api.cpp"
+  "src/weather/cells.cpp"
+  "src/weather/levers.cpp"
+  "src/weather/table.cpp"
+  "src/weather/timeline.cpp"
+  "src/weather/weather.cpp"
+  "src/weather/zones.cpp"
   ${SHADER_HEADERS}
 )
 
 # src/ on the path so every #include reads from the root of this tree - "engine/frame.h", never
 # "../engine/frame.h" - and moving a file between folders does not rewrite anyone's includes.
 target_include_directories(SkyOverhaul PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${CMAKE_CURRENT_BINARY_DIR}/generated"
   "${DEVTOOLS_INCLUDE_DIR}"
@@ -170,3 +197,16 @@ set_target_properties(SkyOverhaul PROPERTIES OUTPUT_NAME "SkyOverhaul" PREFIX ""
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET SkyOverhaul PROPERTY CXX_STANDARD 20)
 endif()
+
+# The weather timeline needs nothing of the game, so it is checked on its own: run
+# out\build\<preset>\SkyOverhaulTests.exe, which prints "weather: OK" or what failed.
+add_executable(SkyOverhaulTests
+  "tests/weather_tests.cpp"
+  "src/weather/cells.cpp"
+  "src/weather/levers.cpp"
+  "src/weather/table.cpp"
+  "src/weather/timeline.cpp"
+  "src/weather/zones.cpp"
+)
+target_include_directories(SkyOverhaulTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set_property(TARGET SkyOverhaulTests PROPERTY CXX_STANDARD 20)

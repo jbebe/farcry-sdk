@@ -4,9 +4,12 @@ sidebar_position: 8
 
 # Weather
 
-**Status:** in talk 2026-11-19. Nothing is planned or built. The weather system belongs to
-`mods/sky-overhaul` (issue #71); its controls go in DevTools' Environment tab. Marked
-**(proposed)** are choices not yet agreed; every number is a first draft.
+**Status:** being built since 2026-11-20. The world-wide weathers, their blends, the mist rules,
+the game's storm, wind, rain and fog driven from them, the weather map's drifting cells and the rain
+in the air, rain on the ground, lightning and thunder and the rainbow after rain are built; storm
+towers were dropped. The weather system belongs to `mods/sky-overhaul` (issue
+#71); its controls go in DevTools' Weather tab. Marked **(proposed)** are choices not yet
+agreed; every number is a first draft.
 
 ## The goal
 
@@ -32,12 +35,98 @@ sidebar_position: 8
   a mission calls them, never in the rotation.
 - **The draft rows, numbers and shares stand** (2026-11-19) and are changed in play where they feel
   wrong.
-- **The weather is worked out, not saved** (2026-11-19). Every cell's sub-weather, and how far a
-  blend has gone, is a function of the engine's storm hour, which saves already, and a fixed seed,
-  so a loaded save comes back with the weather it was made in. Two things to check: the storm curve
-  loops after 92.66 storm hours, about 15 real hours, so the weather would repeat unless a longer
-  curve in the layer lets the hour run on; and whether sleeping moves the storm hour along with the
-  clock.
+- **The weather is worked out, not saved** (2026-11-19, keyed 2026-11-20). Every cell's
+  sub-weather, and how far a blend has gone, is a function of game time and a fixed seed, so a
+  loaded save comes back with the weather it was made in. Game time is the days the game has
+  counted plus the clock, both saved; it never loops, and sleeping runs the clock fast, so the
+  weather passes through the night slept rather than jumping.
+- **Fog in layers** (2026-11-20): rain fog from the rain's strength and dust fog on dusty days,
+  over each weather's own fog (rule 11).
+- **The weather's own numbers, not the game's fog presets** (2026-11-20). The fog and light the
+  weathers set are the mod's own; of the game's authored presets only Storm's light is used.
+- **Rain in the air is the mod's own** (2026-11-20), before the storm towers. Thousands of drops
+  round the player in place of the game's dozen, and curtains of rain in gust bands from about 16 m
+  out to 190 m, coloured as the rain fog and laid over it. The game's drops get no strength; its
+  splashes stay until the rain on the ground. Roofs keep the rain off through the engine's own rain
+  cover map. Drops are lit by the sky, sun and moon only.
+- **The Clouds tab edits the weather on screen** (2026-11-20). With the weather on, the existing
+  cumulus and cirrus sliders edit the row showing, or the one held on DevTools' Weather tab, and
+  each row's tuned values are saved in `bin\sky-overhaul.ini`.
+- **No storm towers** (2026-11-20). Storms keep their cumulus under today's height cap; user: "I
+  dont think we need tall storm clouds".
+- **A rainbow as the rain here clears** (2026-11-20). When the weather where the player stands
+  clears with the sun out, a storm's Clearing or rain stopping, a bow stands opposite the sun at
+  42°; only with the sun under 42°, so mornings and late afternoons. From the pictures the user
+  dropped the second bow and wanted one faint bow cut from one end only, never both, and then
+  simpler: always 130 of its 180 degrees, from the left or the right foot.
+- **Clouded nights are dark** (2026-11-21). The night's light follows each weather's cloud amount,
+  steady through the weather rather than flickering as single clouds cross the moon: under full
+  cloud the moonlight is gone and the night's ambient light is a third. A just-risen moon keeps its
+  faint, grazing light, which the user judged the realistic one over a lifted or brightened low moon.
+- **No rain curtains** (2026-11-21). The curtains of rain from 16 m out read as a mist standing round
+  the player; user: "it looks weird". Rain in the air is the drops alone, with the rain fog beyond.
+- **A clear night at 70%, and no more** (2026-11-21). The user's ceiling on the brightest night: a
+  clear night's moonlight and ambient are cut to 70%; cloudier nights, already under it, stay.
+- **The sun is a disc through dusk** (2026-11-21). The user took the sun at 21:28, about five degrees
+  up, as the most light wanted, and earlier in the dusk the haze round the sun washed it into a white
+  glow. Between ten and twenty-five degrees the sky carries 30% of its haze and the glare holds at a
+  setting sun's strength, both back to the day's by forty; storms keep theirs.
+- **Only a puddle is a mirror** (2026-11-21). The screen-space pass reads its normals from the
+  depth, flat across each triangle, so a sky sheen on wet ground, rocks and walls showed every
+  triangle and rang round the player where the normal's reach stepped up. Wet ground, walls and
+  objects only darken; the materials' own shine, raised by day, carries the wet look on their own
+  smooth normals. At night that raised shine lit trunks from the engine's night ambient, so it fades
+  with the night.
+- **No splashes** (2026-11-21). The mod's splashes read as white discs; user: "at least that was
+  realistic". The game's splashes came back, then more of them and smaller; user: "let's just remove
+  the splashes altogether". Under the mod's drops nothing splashes; the Rain switch's game drops
+  keep theirs.
+- **Stars fade low down** (2026-11-21). The air near the horizon hides the stars: faint at fifteen
+  degrees, gone below five, all of them from thirty-five.
+- **No night brighter than C6's** (2026-11-22). The 70% ceiling was still too bright; user: "what I
+  see during C6 night light should be the most lit night light level". Every night is lit as if at
+  least C6's cumulus covered the sky: 45% of the presets' moonlight and about two thirds of their
+  ambient.
+- **The moon's face shows** (2026-11-22). User: "the moon craters should always be visible, never
+  faded by the glow", "only a slight corona". The air's glow was laid over the disc itself; it now
+  starts at the disc's edge and hugs it, and the disc is held at half of saturation.
+- **The engine's depth in half floats** (2026-11-22). Lines ran across wet grass at fixed distances
+  from the player: the engine's eight-bit linear depth steps by centimetres there, and the wet pass
+  tells grass from ground by it. Sky Overhaul stores it in half floats for about 40 MB more video
+  memory, and Third Person reads that format too; user on the build: "It seem to be working now".
+- **Bolts like trees, flashes like strobes** (2026-11-22). From the stills, the user: the top of a
+  bolt is hidden in the cloud, so it fades in; a bolt "doesn't change thickness, only if it branches
+  out", and a branch that stops in the air is so thin its end is not cut flat; the screen lights
+  "way more, based on how far the lightning was". A bolt fades in over 400 m below the cloud base,
+  keeps its width to the ground and loses a fifth at each branch; a branch starts at half the width
+  and tapers to nothing. The flash brightens the world by the strike's nearest point, up to
+  thirteen times at night, drawn under the bolts so they stay thin. Then, from the user's picks: the
+  bolt's turns rounded twice by corner cutting ("smoother edges"), half the strikes bolts instead
+  of a third, and the flash a quarter as strong where the rain cover map says a roof stands over,
+  since it comes from the sky. The daytime cloud glow stays as it is. Then the flash left the
+  picture for the world's light; user: "it looks like you just cranked up the screen-space
+  brightness. I wanted the increased night light that we suppressed for the cloudy nights". The
+  strike raises the engine's ambient, and at night its moonlight, by as many times over as it adds
+  to the ambient there, up to thirty-one; the cover dimming went with the screen flash. At full
+  speed the land then lit for only a tenth of a second, a frame or two behind the bolt (user: "it
+  doesnt seem to be lit up at all"), so the land's light fades over 0.05 s a pulse while the bolt
+  keeps a quicker one, and a strike brightens it up to eighty-one times: a strike 200 m off strobes
+  the land with each of its pulses (0.15 s and thirty-one times first; user: "make the bright time
+  shorter, like in real life", then "make it even brighter and shorter").
+- **Stars from fifteen degrees, all night** (2026-11-22). User: the stars "should be hidden and only
+  visible from 15° and up, faded of course". They fade in from fifteen degrees to forty. Once the
+  night is full the engine draws no dome, so the mod's sky, drawn in its place, was missing for those
+  hours and every star showed to the horizon; the sky is now drawn over the stars at the sky pass's
+  end then, which keeps the far land on the horizon at night too.
+- **Storms overhead strike often, far ones seldom** (2026-11-22). User: "distant strikes shouldnt
+  be that frequent ... 1 every 15 seconds at most is enough, but when the storm is over my head, I
+  want it more frequent than it was before". An air mass's storm strikes every eight seconds in a
+  downpour and every fifteen in steady rain, from half a kilometre to six, most within three; a
+  cell overhead strikes at its own rate, and every cell off in the distance shares one strike in
+  fifteen seconds.
+- **Leaves let the rain through** (2026-11-22). Tree crowns kept the ground below them dry in their
+  own shape, which cut the puddles like a shadow; user: "it should not do that". Leaves are left out
+  of the engine's cover map, so the rain also falls through trees; roofs and trunks still cover.
 
 ## What the game does now
 
@@ -62,7 +151,7 @@ The game's clock runs at time scale 6: a game hour is 10 real minutes, a game da
 | --- | --- | --- | --- | --- |
 | L1 | Cumulus coverage | 0–1 (today 0.44) | Sky Overhaul cloud layer | exists |
 | L2 | Cumulus water: how solid and dark | 0.005–0.3 (today 0.021, storm 0.09) | cloud layer | exists |
-| L3 | Cumulus height: base and thickness | base 100–4000 m, thickness to 3000 m | cloud layer | exists; a storm tower (to ~10 km) is past today's cap: new |
+| L3 | Cumulus height: base and thickness | base 100–4000 m, thickness to 3000 m | cloud layer | exists; storm towers past it were dropped |
 | L4 | Cumulus size | 500–12000 m | cloud layer | exists |
 | L5 | Underside shade | 0–1 (storm 0.8) | cloud layer | exists, storm only |
 | L6 | Cirrus reach | 0–1 (today 0.41) | high sheet | exists |
@@ -83,19 +172,20 @@ The game's clock runs at time scale 6: a game hour is 10 real minutes, a game da
 | L21 | Wind force | 0–250 | engine; `SetWindOverride` works in game | exists |
 | L22 | Gusts | multiplier | engine fluctuation; a gust front ahead of a storm is new | partly |
 | L23 | Wind direction | heading | engine drift; override works | exists |
-| L24 | Lightning inside cloud | flash | cloud shader | new |
-| L25 | Lightning bolt | drawn line | sky pass, drawn procedurally (no asset) | new |
-| L26 | Flash on the world | a few frames | scene light or the grade pass | new |
-| L27 | Thunder | sound | new recordings in a data layer, played the way Flashlight plays its click; after the flash by distance, ~3 s per km | new |
+| L24 | Lightning inside cloud | flash | cloud shader | built |
+| L25 | Lightning bolt | drawn line | sky pass, drawn procedurally (no asset) | built |
+| L26 | Flash on the world | a few frames | a pass over the picture, weighed against the ambient light | built |
+| L27 | Thunder | sound | public-domain recordings in three distance banks in the data layer, played the way Flashlight plays its click; after the flash at the speed of sound | built |
 | L28 | Sun halo: a 22° ring in a thick cirrus sheet, the classic sign of a coming front **(proposed)** | 0–1 | sky shader | new |
-| L29 | Rainbow opposite a low sun as rain clears **(proposed)** | 0–1 | sky shader | new |
-| L30 | Wet ground: darker, with a sheen, in and after rain | 0–1 | a screen-space pass | new, later |
+| L29 | One faint rainbow opposite a low sun as the rain here clears, 130 of its 180 degrees from the left or the right foot | 0–1 | a pass over the sky after the clouds, lit by the sun the clouds let through to the eye | built |
+| L30 | Wet ground: darker, with mirroring puddles on level ground, in and after rain; the materials' own shine raised by day | 0–1 | a screen-space pass, and the materials' shine registers | built |
 | L31 | Dust in the air | — | postponed with the distant dust | postponed |
 
 ## The weathers
 
 Cumulus is L1 coverage · L2 water · L3 height. Cirrus is L6 reach · L7 opacity. Fog is L14 end and
-L16 colour; "game" means the clear fog as the presets give it (about 400–500 m by day).
+L16 colour; "game" means the clear fog as the presets give it (about 400–500 m by day). Rain, dust and
+mist lay fogs of their own over any row (rule 11).
 
 | ID | Sub-weather | Cumulus | Shade | Cirrus | Air | Sun | Fog | Heat haze | Rain | Wind | Lightning | Lasts |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -106,7 +196,7 @@ L16 colour; "game" means the clear fog as the presets give it (about 400–500 m
 | C4 | A few cumulus | 0.2 · 0.015 · flat | 0 | 0–0.2 · 0.04 | normal | 1 | game | full | – | breeze | – | hours |
 | C5 | Lots of cumulus and cirrus (today's sky) | 0.44 · 0.021 · normal | 0 | 0.41 · 0.04 | normal | 1 | game | full | – | breeze | – | hours |
 | C6 | Thick but light cumulus, no cirrus | 0.55 · 0.012 · tall | 0 | 0 | normal | 1 | game | most | – | breeze | – | hours |
-| C7 | Hazy and dry **(proposed)** | 0–0.1 · 0.015 · flat | 0 | 0.2 · 0.04 | milky 1.2 | 0.9 | 300 m, warm | strong | – | breeze | – | a day or more |
+| C7 | Hazy and dry **(proposed)** | 0–0.1 · 0.015 · flat | 0 | 0.2 · 0.04 | milky 1.2 | 0.9 | dry-season haze through the whole air, milky sky | strong | – | breeze | – | a day or more |
 | **F** | **Foggy** | | | | | | | | | | | |
 | F1 | Fog under full cirrus | 0 | 0 | 1 · 0.3, halo | milky 1.2 | 0.7 | 150 m, white-grey | off | – | calm | – | hours |
 | F2 | Fog, cumulus and full cirrus | 0.4 · 0.021 · normal | 0.2 | 1 · 0.3 | milky 1.2 | 0.7 | 150 m, white-grey | off | – | calm | – | hours |
@@ -116,17 +206,17 @@ L16 colour; "game" means the clear fog as the presets give it (about 400–500 m
 | M2 | Mist after rain **(proposed)** | as the weather | – | as the weather | – | – | 200 m, white | off | – | calm | – | ~1 h after rain |
 | **O** | **Overcast and rain (proposed)** | | | | | | | | | | | |
 | O1 | Overcast | 0.85 · 0.05 · flat | 0.5 | hidden | milky 1.4 | 0.4 | game | off | – | breeze | – | hours |
-| O2 | Drizzle | 0.9 · 0.06 · flat | 0.6 | hidden | milky 1.4 | 0.35 | 300 m, grey | off | drizzle | breeze | – | 1–4 h |
-| O3 | Steady rain | 0.95 · 0.08 · flat | 0.7 | hidden | thick 1.6 | 0.3 | 200 m, grey-green | off | rain | windy | – | 2–6 h |
+| O2 | Drizzle | 0.9 · 0.06 · flat | 0.6 | hidden | milky 1.4 | 0.35 | the rain's | off | drizzle | breeze | – | 1–4 h |
+| O3 | Steady rain | 0.95 · 0.08 · flat | 0.7 | hidden | thick 1.6 | 0.3 | the rain's | off | rain | windy | – | 2–6 h |
 | **S** | **Storm** | | | | | | | | | | | |
 | S0 | Distant storm | your sky as C4–C6, plus one dark tower on the horizon | – | – | – | – | game | as the weather | – | as the weather | far flashes, low rumble | 1–2 h |
 | S1 | Gathering: cumulus growing tall and dark | 0.5 · 0.06 · towering | 0.6 | 0.8 · 0.4 | 1.4 | 0.6 | game | off | – | gust front | first strikes | 20–40 min |
-| S2 | Thunderstorm | 0.65 · 0.09 · towering | 0.8 | 1 · 0.8 | thick 1.8 | 0.3 | game (the storm rule) | off | shower | gusty | some | 30–90 min |
-| S3 | Heavy storm | 0.9 · 0.12 · towering | 0.9 | 1 · 0.8 | thick 1.8 | 0.2 | 120 m, blue-grey | off | downpour | gale | frequent | 15–45 min |
+| S2 | Thunderstorm | 0.65 · 0.09 · towering | 0.8 | 1 · 0.8 | thick 1.8 | 0.3 | the rain's | off | shower | gusty | some | 30–90 min |
+| S3 | Heavy storm | 0.9 · 0.12 · towering | 0.9 | 1 · 0.8 | thick 1.8 | 0.2 | the rain's | off | downpour | gale | frequent | 15–45 min |
 | S4 | Clearing | 0.3 · 0.03 · normal, broken | 0.2 | 0.5 · 0.1 | crisp 0.5 | 1 | game, then M2 | off until dry | – | easing | – | 1–2 h |
 | **W** | **Wind and dust (proposed)** | | | | | | | | | | | |
 | W1 | Breezy | any C row, faster drift | | | | | | | – | windy | – | hours |
-| W2 | Windy and hazy | 0–0.1 | 0 | 0.2 | milky 1.3, warm | 0.85 | 250 m, ochre | weak | – | windy–gale | – | hours |
+| W2 | Windy and hazy | 0–0.1 | 0 | 0.2 | milky 1.3, warm | 0.85 | thick dust at least | weak | – | windy–gale | – | hours |
 | W3 | Sandstorm, missions only | the retail `SandStorm` presets | | | | | 30 m, ochre | off | – | gale | – | as the mission holds it |
 
 Every weather also runs at night: the clouds take the moon's light as they do now, and lightning reads
@@ -154,15 +244,47 @@ best in the dark.
 7. **Lightning** only in S0–S3. Thunder comes after its flash by distance.
 8. **Wind:** calm before the storm (F3), a gust front as it breaks (S1 to S2), strongest in S3,
    easing in S4.
-9. **Storm fog stays clear** in S1 and S2, as the storm rule has it; only the heavy storm, the
-   rain rows and the fog rows thicken and tint the fog.
+9. **Storm fog stays clear** until it rains: the gathering storm (S1) keeps the game's fog, and the
+   shower that follows brings the rain's own (rule 11).
 10. **Missions win.** While a retail script holds a weather override (Border Storm's sandstorm,
     `a3sm15`'s storm), the system follows it and resumes after.
+11. **Fog in layers.** Over the weather's own fog lie rain fog, dust fog and the mist, the nearest
+    end winning. Rain fog comes with any rain: 200 m in drizzle, 110 m in steady rain, 60 m in a
+    downpour, a light grey spray through the whole air, bluer in a downpour. Dust fog comes on
+    dry ground with the sun up: each day rolls how dusty it is (about two days in five have none),
+    more with wind, ochre-beige, from 200 m light to 80 m thick, the desert most, the savannah six
+    tenths of it, never the jungle; rain clears it out of the air within about a game minute. In
+    still air dust is haze through the whole air and turns the sky milky; as the wind rises from a
+    breeze it lifts off the ground and lies there. Lying fog is full strength over the player's
+    ground and pools in lower ground. Mist thins to an eighth by 35 m up, a shallow layer hilltops
+    stand out of; lifted dust only by 150 m, deep enough that the far hills Flatten draws low stay
+    inside it rather than peeking out as small bumps. Hazy and dry keeps at least half the dust and a milky sky, windy and hazy thick
+    dust. Where the weather lays a fog, the game's own thinning with height, about half strength at
+    the ground, is not kept; the clouds keep the game's.
+12. **A milky sky.** Haze through the whole air pales the sky toward its own horizon's
+    brightness in the haze's hue, all the way at the horizon and about a third at the zenith:
+    hazy and dry, windy and hazy, the fog weathers, and any still day's dust.
+13. **Cells.** A cell reaches 1.5–3.5 km, lives 1.5–3 game hours and drifts at the speed the
+    weather under the clouds does, about 1.6 km a game hour. It gathers for its first quarter (S1),
+    turns to rain over the next fifth (S2, a heavy heart S3 in about a third of them, more over
+    jungle) and dies away from seven tenths of its life. Cells start in 15-minute slots anywhere over
+    a 40 km square round the world, most around 15:00 and a fifth as many at night, fewer under
+    foggy, grey, front or windy air and under dusty dry air; on the map the jungle feeds twice what
+    savannah does and the desert almost nothing. At the player a cell's core holds the weather within
+    about seven tenths of its reach; ahead along its track, only as far as it will still arrive at
+    its full and only as wide as its core sweeps, lies the warning sky F3, so a warning always ends
+    under the core; behind, over ground it has rained on for up to 1.5 game hours, the clearing S4.
+    The savannah keeps six tenths of a cell's hold and the desert a fifth, and a front's own warning
+    and storm outweigh a cell's warning and clearing. In the sky a cell's cloud spreads half as far
+    again as its rain, a crowd of cumulus round a closed raining heart, darker and wetter at the
+    base, with a torn anvil of ice ahead of it.
 
 ## How often: the zones
 
 Shares of game time per weather family, a first draft, the same all game. The zone is the engine's
-own savannah, jungle and desert weighting under each cell of the map.
+own savannah, jungle and desert weighting under each cell of the map. The air mass takes about a
+third of each zone's storms as fronts and the cells bring the rest; in world 1 the deepest savannah,
+jungle and desert points get storms about 17%, 24% and 6% of the time, the desert's from fronts.
 
 | | Jungle | Savannah | Desert |
 | --- | --- | --- | --- |
@@ -180,6 +302,6 @@ own savannah, jungle and desert weighting under each cell of the map.
 - **Engine, from the plugin:** the storm factor, the fog setters, the wind override and the rain
   flag; the engine's own storm curve and rain roll kept quiet. Needs RE: whether a rain strength
   below 1 thins the drops, and what the fog's height curves do.
-- **New:** the weather map and its scheduler; cumulus towers taller than 3 km; lightning
+- **New:** the weather map and its scheduler; lightning
   in cloud, bolts and the flash on the world; thunder recordings and their playback; the DevTools
-  Environment tab picking and forcing a weather and showing what comes next.
+  Weather tab holding a weather and showing what comes next.

@@ -20,6 +20,7 @@
 #include "engine/weather.h"
 #include "engine/world.h"
 #include "fcse_api.h"
+#include "overlay/sky_weather.h"
 
 #include <windows.h>
 
@@ -430,6 +431,12 @@ namespace {
         }
         if (verb == "weather") {
             return SetWeather(rest);
+        }
+        if (verb == "skyweather") {
+            return Result(SkyWeather::Hold(rest));
+        }
+        if (verb == "skycell") {
+            return Result(SkyWeather::Plant(rest));
         }
         if (verb == "send") {
             return Send(rest);

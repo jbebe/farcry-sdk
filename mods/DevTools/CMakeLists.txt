@@ -94,6 +94,7 @@ add_library(DevTools SHARED
   "src/overlay/lua_console.cpp"
   "src/overlay/overlay.cpp"
   "src/overlay/range.cpp"
+  "src/overlay/sky_weather.cpp"
   "src/overlay/spawner.cpp"
   "src/remote/combat_log.cpp"
   "src/remote/hit_log.cpp"
@@ -114,11 +115,13 @@ target_link_libraries(DevTools PRIVATE imgui dinput8 dxguid ole32 pdh psapi wind
 target_compile_definitions(DevTools PRIVATE NOMINMAX)
 
 # src/ on the path so every #include reads from the root of this tree rather than relative to the
-# including file, and moving a file between folders does not rewrite anyone's includes.
+# including file, and moving a file between folders does not rewrite anyone's includes. Sky
+# Overhaul's include/ holds the weather contract the Environment tab reads when that plugin is loaded.
 target_include_directories(DevTools PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${DEVTOOLS_INCLUDE_DIR}"
   "${FCSE_INCLUDE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../sky-overhaul/include"
   "${imgui_SOURCE_DIR}/backends"
 )
 

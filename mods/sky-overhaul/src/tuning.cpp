@@ -4,6 +4,7 @@
 
 #include "engine/cloud_layer.h"
 #include "fcse_api.h"
+#include "weather/weather.h"
 
 #include "imgui.h"
 
@@ -16,6 +17,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
     using SkyOverhaul::Tuning::Values;
@@ -286,14 +288,54 @@ namespace {
          "drawn toward the eye's."},
     };
 
+    using SkyOverhaul::Weather::Row;
+
+    // The values each weather carries for itself, which these sliders edit for the weather on
+    // screen while the weather is on. Stored as "Weather <id> <key> = <value>" where they differ
+    // from the row's own.
+    struct RowField {
+        size_t offset;
+        float Row::*field;
+    };
+    constexpr RowField kRowFields[] = {
+        {offsetof(Values, cloudCoverage), &Row::coverage},
+        {offsetof(Values, cloudDensity), &Row::density},
+        {offsetof(Values, cirrus), &Row::cirrus},
+        {offsetof(Values, cirrusOpacity), &Row::cirrusOpacity},
+        {offsetof(Values, contrails), &Row::contrails},
+    };
+    constexpr std::string_view kRowPrefix = "Weather ";
+
     Values g_values = {};
     // Set by an edit and cleared by the save that follows once nothing is held, so a slider writes
     // the file when it is let go rather than on every frame it moves.
     bool g_unsaved = false;
 
+    // Every row as the table has it, before the file is read over it.
+    std::vector<Row> g_rowDefaults;
+
     float* Field(const Parameter& parameter) {
         return reinterpret_cast<float*>(reinterpret_cast<char*>(&g_values) + parameter.offset);
     }
+
+    const RowField* RowFieldOf(const Parameter& parameter) {
+        for (const RowField& field : kRowFields) {
+            if (field.offset == parameter.offset) {
+                return &field;
+            }
+        }
+        return nullptr;
+    }
+
+    const Parameter* ParameterAt(size_t offset) {
+        for (const Parameter& parameter : kParameters) {
+            if (parameter.offset == offset) {
+                return &parameter;
+            }
+        }
+        return nullptr;
+    }
+
 
     // Beside fcse.ini, in the folder the process was started from.
     const std::filesystem::path& File() {
@@ -321,6 +363,26 @@ namespace {
         return text.substr(first, text.find_last_not_of(" \t\r") - first + 1);
     }
 
+    // "Weather C5 Cloud coverage", read into that row. False for a key that names no weather.
+    bool ReadRowValue(std::string_view key, float value) {
+        if (key.substr(0, kRowPrefix.size()) != kRowPrefix) {
+            return false;
+        }
+        key.remove_prefix(kRowPrefix.size());
+        const size_t space = key.find(' ');
+        const int row = space == std::string_view::npos
+                            ? -1
+                            : SkyOverhaul::Weather::Find(std::string(key.substr(0, space)).c_str());
+        for (const RowField& field : kRowFields) {
+            const Parameter* parameter = ParameterAt(field.offset);
+            if (row >= 0 && Trim(key.substr(space + 1)) == parameter->key) {
+                SkyOverhaul::Weather::Rows()[row].*field.field =
+                    std::clamp(value, parameter->min, parameter->max);
+            }
+        }
+        return true;
+    }
+
     void Save() {
         std::string text = "; Sky Overhaul. Edited in its window in DevTools' overlay; edits made "
                            "here by hand\n; are read at launch or by that window's Reload.\n";
@@ -328,6 +390,19 @@ namespace {
             char value[32];
             const char* end = std::to_chars(value, value + sizeof(value), *Field(parameter)).ptr;
             text.append(parameter.key).append(" = ").append(value, end - value).append("\n");
+        }
+        for (size_t row = 0; row < g_rowDefaults.size(); row++) {
+            const Row& tuned = SkyOverhaul::Weather::Rows()[row];
+            for (const RowField& field : kRowFields) {
+                if (tuned.*field.field == g_rowDefaults[row].*field.field) {
+                    continue;
+                }
+                char value[32];
+                const char* end = std::to_chars(value, value + sizeof(value), tuned.*field.field).ptr;
+                text.append(kRowPrefix).append(tuned.id).append(" ");
+                text.append(ParameterAt(field.offset)->key).append(" = ");
+                text.append(value, end - value).append("\n");
+            }
         }
 
         std::ofstream file(File(), std::ios::trunc);
@@ -375,8 +450,16 @@ namespace {
         }
     }
 
-    // Every row of a category, under a heading wherever the group changes. True when one changed.
+    // Every row of a category, under a heading wherever the group changes, the weather's own values
+    // as the weather on screen has them. True when one changed.
     bool DrawGroups(const Category& category) {
+        const int showing = SkyOverhaul::Weather::Showing();
+        Row* weather = showing >= 0 ? &SkyOverhaul::Weather::Rows()[showing] : nullptr;
+        if (weather != nullptr && &category == &kClouds) {
+            ImGui::Text("Editing %s %s", weather->id, weather->name);
+            ImGui::TextDisabled("Hold a weather on DevTools' Environment tab to edit another.");
+        }
+
         bool changed = false;
         const Group* group = nullptr;
         for (const Parameter& parameter : kParameters) {
@@ -388,9 +471,11 @@ namespace {
                 group = parameter.group;
                 ImGui::SeparatorText(group->name);
             }
-            changed |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min,
-                                          parameter.max, parameter.format,
-                                          ImGuiSliderFlags_AlwaysClamp);
+            const RowField* field = RowFieldOf(parameter);
+            float* value = weather != nullptr && field != nullptr ? &(weather->*field->field)
+                                                                  : Field(parameter);
+            changed |= ImGui::SliderFloat(parameter.key, value, parameter.min, parameter.max,
+                                          parameter.format, ImGuiSliderFlags_AlwaysClamp);
             ImGui::SetItemTooltip("%s", parameter.help);
         }
         EndGroup(group);
@@ -416,6 +501,11 @@ void SkyOverhaul::Tuning::Load() {
     for (const Parameter& parameter : kParameters) {
         *Field(parameter) = parameter.defaultValue;
     }
+    Row* rows = SkyOverhaul::Weather::Rows();
+    if (g_rowDefaults.empty()) {
+        g_rowDefaults.assign(rows, rows + SkyOverhaul::Weather::RowCount());
+    }
+    std::copy(g_rowDefaults.begin(), g_rowDefaults.end(), rows);
 
     std::ifstream file(File());
 
@@ -429,10 +519,13 @@ void SkyOverhaul::Tuning::Load() {
         }
         const std::string_view key = Trim(text.substr(0, equals));
         const std::string_view value = Trim(text.substr(equals + 1));
+        float read = 0.0f;
+        if (std::from_chars(value.data(), value.data() + value.size(), read).ec != std::errc{} ||
+            ReadRowValue(key, read)) {
+            continue;
+        }
         for (const Parameter& parameter : kParameters) {
-            float read = 0.0f;
-            if (key == parameter.key &&
-                std::from_chars(value.data(), value.data() + value.size(), read).ec == std::errc{}) {
+            if (key == parameter.key) {
                 *Field(parameter) = std::clamp(read, parameter.min, parameter.max);
             }
         }

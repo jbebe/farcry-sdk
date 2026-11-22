@@ -28,12 +28,28 @@ namespace {
     constexpr float kStormDimming = 0.7f;
     constexpr float kStormGrey = 0.85f;
 
+    // How hard haze past the storm's own dims the sun for each air mass its light crosses beyond
+    // one, and the most air masses a low sun is counted as crossing.
+    constexpr float kHazeDimming = 0.1f;
+    constexpr float kMostAirMass = 20.0f;
+
     // How high the moon climbs, as a sine, while its light comes up to full.
     constexpr float kMoonUp = 0.2f;
 
     // The sun's height, as a sine, over which the daylight cut comes in: five to twenty-five degrees.
     constexpr float kDaylightLow = 0.087f;
     constexpr float kDaylightHigh = 0.423f;
+    // Ten and forty degrees: where dusk is in full and where it has gone.
+    constexpr float kDuskFull = 0.174f;
+    constexpr float kDuskGone = 0.643f;
+    // Three degrees up and six down: where the night begins to take over and where it has.
+    constexpr float kNightBegins = 0.05f;
+    constexpr float kNightFull = -0.1f;
+
+    float Smooth(float from, float to, float value) {
+        const float t = std::clamp((value - from) / (to - from), 0.0f, 1.0f);
+        return t * t * (3.0f - 2.0f * t);
+    }
 
     float Dot(const float a[3], const float b[3]) {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -96,12 +112,21 @@ float SkyOverhaul::SkyModel::Storminess(float storm) {
     return std::clamp((storm - kStormCalm) / (1.0f - kStormCalm), 0.0f, 1.0f);
 }
 
+float SkyOverhaul::SkyModel::StormFactor(float storminess) {
+    return kStormCalm + (1.0f - kStormCalm) * storminess;
+}
+
 float SkyOverhaul::SkyModel::Haze(float storminess) {
     return kClearHaze * (1.0f + storminess * kStormHaze);
 }
 
 float SkyOverhaul::SkyModel::SunShare(float storminess) {
     return 1.0f - storminess * kStormDimming;
+}
+
+float SkyOverhaul::SkyModel::ThroughHaze(float sunHeight, float extraHaze) {
+    const float airMass = 1.0f / (std::max)(sunHeight, 1.0f / kMostAirMass);
+    return std::exp(-kHazeDimming * (std::max)(extraHaze, 0.0f) * (airMass - 1.0f));
 }
 
 float SkyOverhaul::SkyModel::MoonRise(float moonHeight) {
@@ -113,10 +138,17 @@ float SkyOverhaul::SkyModel::Grey(float storminess) {
 }
 
 float SkyOverhaul::SkyModel::DaylightCut(float sunHeight, float storminess, float full) {
-    const float t =
-        std::clamp((sunHeight - kDaylightLow) / (kDaylightHigh - kDaylightLow), 0.0f, 1.0f);
-    const float high = t * t * (3.0f - 2.0f * t) * (1.0f - storminess);
+    const float high = Smooth(kDaylightLow, kDaylightHigh, sunHeight) * (1.0f - storminess);
     return 1.0f + (full - 1.0f) * high;
+}
+
+float SkyOverhaul::SkyModel::Dusk(float sunHeight) {
+    return Smooth(kDaylightLow, kDuskFull, sunHeight) *
+           (1.0f - Smooth(kDaylightHigh, kDuskGone, sunHeight));
+}
+
+float SkyOverhaul::SkyModel::Night(float sunHeight) {
+    return Smooth(kNightBegins, kNightFull, sunHeight);
 }
 
 void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], float eyeHeight,

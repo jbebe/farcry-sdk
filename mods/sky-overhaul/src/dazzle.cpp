@@ -4,6 +4,7 @@
 
 #include "angles.h"
 #include "clouds.h"
+#include "sky_model.h"
 
 #include "engine/camera.h"
 #include "engine/clock.h"
@@ -37,6 +38,9 @@ namespace {
 
     // How much longer the eye takes to recover than it spent being dazzled.
     constexpr float kLinger = 2.0f;
+
+    // The sun's elevation whose glare holds through dusk.
+    constexpr float kSettingSun = 5.0f;
 
     // The sun overstimulates the red and green cones hardest, so the fatigued response first skews
     // towards their complement and then drifts as the cone types recover at different rates.
@@ -389,9 +393,13 @@ namespace {
         const float t = std::acos(cosAngle) / spread;
         const float proximity = std::pow(1.0f - t, v.glareFalloff);
 
-        // A low sun is a weak one: its light travels further through the atmosphere.
-        const float elevation = std::clamp(
-            g_thisFrame.elevation / std::sin(Radians(v.elevationRamp)), 0.0f, 1.0f);
+        // A low sun is a weak one: its light travels further through the atmosphere. Through dusk
+        // it stays as weak as a setting sun's, so the sun shows as a disc.
+        const float ramp = std::sin(Radians(v.elevationRamp));
+        const float full = std::clamp(g_thisFrame.elevation / ramp, 0.0f, 1.0f);
+        const float setting = (std::min)(full, std::sin(Radians(kSettingSun)) / ramp);
+        const float elevation =
+            full + (setting - full) * SkyOverhaul::SkyModel::Dusk(g_thisFrame.elevation);
 
         const float visible = VisibleFraction();
         const float daylight = 1.0f - std::clamp(g_thisFrame.night, 0.0f, 1.0f);

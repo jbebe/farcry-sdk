@@ -39,9 +39,26 @@ curved-horizon variables into the renderer's config and binding the world's temp
 6. Fog: the zone-blended preset, lerped toward the storm's fog by the storm transition curve, then
    toward a fog override. The result goes to `C3DEngine`'s fog setters and to `CSky::UpdateFog`.
    On Steam `Dunia.dll` the start, end and amount setters are `0x1032F620`, `0x1032F640` and
-   `0x1032F660`, each `__thiscall` taking one float with `RET 4`. In a running game on the test range
-   the end was 398 m with an amount of 1 at noon, and 30 m with 0.98 under the
-   `Default.SandStorm.Fog` override (**seen in game**).
+   `0x1032F660`, each `__thiscall` taking one float with `RET 4`, and the start and end height
+   setters `0x1032F6B0` and `0x1032F6E0` take two floats with `RET 8`. Each writes the scene's fog
+   object: start `+0x20`, end `+0x24`, amount `+0x28` (clamped), the start height pair `+0x2C` and
+   `+0x30`, the end height pair `+0x34` and `+0x38`. The manager is their only caller, and loads
+   each value from a `CFogSetting` on its stack: at the first setter's call (Steam `0x10121FF1`) that
+   is start, end and amount at `esp+0x34` to `+0x3C`, the four height values to `+0x4C`, and the sun
+   side's and far side's colours at `+0x50` and `+0x60`, which `CSky::UpdateFog` (Steam `0x1018C060`,
+   `RET 8`) is handed next. In a running game on the test range the end was 398 m with an amount of 1
+   at noon, and 30 m with 0.98 under the `Default.SandStorm.Fog` override (**seen in game**).
+
+   The shaders take the setting as two registers, `FogValues` (c51 on the vertex side) and
+   `FogHeightValues` (c52), and fog a point by
+   `saturate(distance × V.x + V.y) × V.z × (saturate(z × H.x + H.y) × H.z + H.w)`, with `z` the
+   point's height in the world. `V` is 1/(end − start), −start/(end − start) and the amount; `H` is
+   1/(end height − start height), −start height/(end height − start height), the end strength less
+   the start strength, and the start strength. So the height pairs make the fog's strength a ramp
+   between two heights: equal strengths give fog the same at every height, and a start below zero
+   leaves fog at the eye itself, the first-person weapon included. Retail's clear fog at noon
+   ramps from 0.55 at 5 m to 0.25 at 301 m, so the land fogs at about half the strength the
+   distance alone gives (**seen in game**, GOG v1.03, the registers logged by a plugin).
 7. `UpdateAdaptiveBloom` and `UpdateAtmosphericScattering`, then depth of field with the storm's and
    an override's blended in.
 8. `UpdateSky`: the sky gradients, the storm sky, and the clouds' formation, material and light.
@@ -91,6 +108,21 @@ timer reaches the delay at `+0x3C0`. When either flag is set the timer resets an
 delay of zero never holds. `SetDelayShadowMovement` (`0x09156C60`) is called from `SetTimeOfDay`, from
 starting and stopping a time demo, and from `UpdateVars`.
 
+The days passed are counted at `+0x4EC` (`CumulatedDays`, `GetCumulatedDays` `0x09156CC0`), one more
+each time the clock passes midnight, and nowhere else: `SetTimeOfDay` (`0x0915E920`) only sets the
+time. So days plus the clock's seconds measure game time since the playthrough began.
+
+**What a save keeps.** `CDynamicEnvironmentManager::RegisterProperties` (`0x0915A7F0`) registers the
+saved members: `TimeOfDay` (`+0x260`), `StormHour` (`+0x480`), the fog, lighting, cloud, wind and
+depth-of-field override blocks (`+0x148`, `+0x164`, `+0x180`, `+0x19C`, `+0x1D8`), `CumulatedDays`,
+`IsSunLight` (`+0x31`), `WindOverideEnable` (`+0x1D0`) and `RainEvaluator` (`+0x49C`, the raining
+flag, its timer and threshold).
+
+**Sleeping runs the clock fast.** `CBedroll::StartSleeping` (`0x08BA3BF0`) keeps the time scale and
+the hour to wake at, and `UpdateSleep` (`0x08BA3A40`) sets the time scale every frame from the bedroll
+archetype's `archTimeSpeedCurve`, by how much of the sleep is left. The clock therefore passes through
+every hour slept, so midnight counts its day and the storm hour runs on as in play.
+
 ## The sun, the moon and the day-cycle scale
 
 `CSky::Update` (`0x09173C60`) converts the clock's seconds from midnight to hours and passes them
@@ -139,6 +171,14 @@ clock or the day-cycle scale is open.
 | `+64` | `clrAmbientLightColor` |
 | `+80` | `clrGroundColor` |
 | `+96` | `fRimLightIntensity` |
+
+It blends three things in turn: the zones' presets, the storm preset by the storm factor, and a
+script's lighting override, whose preset the manager holds at `+0x168` and its weight at `+0x17C`.
+Two functions call it, `UpdateSky` and `UpdateLight`, and both run in `Update` after the weather
+update, so anything written over the storm factor there reaches the frame's light. In the Steam
+`Dunia.dll` it is `0x10119100`, a thiscall taking the time of day and the setup to fill and popping 8
+bytes; `UpdateSky` is `0x1011A380`, `UpdateLight` `0x1011A7C0` and the weather update `0x10118FB0`
+(RE-verified, Steam v1.03; the bytes match GOG v1.03).
 
 `CDynamicEnvironmentManager::UpdateLight` (`0x0915F110`) then:
 
@@ -254,15 +294,22 @@ The storm is a factor from 0 to 1 that every frame recomputes, not an event that
 3. That value is multiplied by one minus the desert zone's weight. The weight used follows the zone
    blend's (`+0x258`) at no more than 1/120 per second.
 4. `GetStormFactor` (`0x09157510`) lerps `+0x484` toward the scripted value at `+0x1B8` by the
-   override's weight at `+0x1CC`.
+   override's weight at `+0x1CC`. Its readers are `Update`, `GetFinalLighting`, `UpdateSky` and
+   `UpdateAtmosphericScattering`. The Steam `Dunia.dll` inlines it into `Update` (`0x10121870`),
+   which computes the same lerp straight after `UpdateWeather` (`0x10118FB0`, `RET 4`) returns, so
+   a value written to `+0x484` at that point reaches every reader with a script's override still
+   blended over it.
 
 `SetScriptedStormFactorOverride(value, seconds)` clamps the value into `+0x1B8` and blends the weight
 to 1 over the seconds given. `RemoveScriptedStormFactorOverride(seconds)` blends it back to 0. The
 manager's environment reset (`Dunia.dll` Steam `0x1011CF70`) clears the blend, so an override does not
 survive it.
 
-Zone blending reads the weights of the player's `CZoneInfoComponent`. Savannah, plus whatever no zone
-covers, goes to `+0x230`, jungle to `+0x244` and desert to `+0x258`, each blended over half a second.
+Zone blending (`UpdateZoneBlending`, `0x0915FA50`) reads the weights of the player's
+`CZoneInfoComponent`. Savannah, plus whatever no zone covers, goes to `+0x230`, jungle to `+0x244`
+and desert to `+0x258`, each blended over half a second. Each of the three is the last float of a
+blend block of five, starting at `+0x220`, `+0x234` and `+0x248`: from, to, duration, time elapsed
+and the current weight.
 
 While the flag at `CGameControllerManager` `+4` is set, the curve is replaced by
 `SetMultiplayerWeather`: either a fixed factor or the curve started from a chosen point.
@@ -279,15 +326,54 @@ override already blended in.
 | Coverage above the threshold at `+0x4A4` | The timer counts down by frame time times the time scale. When it expires, a roll sets the flag, true with a probability of about the coverage less a random tenth, then picks a new threshold from 0.63–0.75 and a new timer of 180–195 times the time scale |
 | Anything else | Nothing changes |
 
-`UpdateRain` (`0x0915F650`) acts on the flag through the `CRainComponent` of the entity the terminal
-is focused on, and does nothing when that entity has none.
+`UpdateRain` (`0x0915F650`; Steam `0x1011B480`, frame time and wind force, `RET 8`) acts on the flag
+through the `CRainComponent` of the entity the terminal is focused on, and does nothing when that
+entity has none.
 
 - **Starting and stopping:** it starts or stops the component whenever the flag disagrees with the
   component's own state. It sets the target at `+0x48C` to 1 or 0 and blends the intensity at `+0x498`
-  toward it over five seconds.
+  toward it over five seconds, from the intensity at `+0x488` it started from.
+- **Strength:** `CRainComponent::SetIntensity` (`0x090A1150`; Steam `0x10050270`, `RET 4`, called by
+  `UpdateRain` every frame) stores the intensity and hands it to the rain particle system's `+0x60`. `CastRays` (`0x090A20A0`) casts rays per second times the
+  intensity, and `GenerateSplashes` (`0x090A2FB0`) makes the render config's splash count times the
+  intensity, so an intensity below 1 is lighter rain. Both count per second times the frame time
+  they are handed. Retail only ever blends it between 0 and 1.
 - **Angle:** 270° plus 35° times the square of force/180 (capped at 1), turned by the drift direction
   at `+0x4B0` less 90°.
 - **Sound:** the intensity also goes to the ambience manager.
+- **Drops:** one particle system, `psRainEmitter`, drawing `graphics\gfx\atmospherics\gfx_rain.xbt`
+  (128×32 streaks), kept by `CRainComponent::Update` (`0x090A5940`) at the player less the emitter
+  offset `+0xF8` along the rain direction `+0xEC`, led by the player's movement. Splashes are
+  `psRainSplash`, retail's `environment.weather.rain_splash`: two sprites, an animated splash
+  (`gfx_splash_anm2.xbt`, size 0.1, 0.4 s) and a drop (`gfx_rain.xbt`, size 0.2, 0.35 s), both
+  with a gravity of 3.5. `Finalize` makes a pool of 250 of the system, a count the constructor sets, and a
+  splash with the whole pool still playing is skipped.
+- **Cover:** `Start` (`0x090A2B70`) switches on a scene light at `+0x68` and gives the drops its group
+  through `SetOcclusionLightGroup`; `Update` keeps that light up-rain at twice the emitter offset.
+  The component's setup makes it an orthographic light 64 by 64 m across and 128 m deep, in light
+  group `0x80000000`. Drops are hidden by a rain shadow map from it, drawn from materials flagged
+  `RainOccluder` (byte `+0xF`, read in `mrl::SetupMaterial`, Steam `0x10362DE0`) at the render
+  config's `RainShadowMapSize`.
+- **The cover map in a frame:** while it rains, two passes follow the sun's cascades into a
+  512×512 `NULL` render target with a `D24S8` depth texture, solid draws then alpha-tested ones. The
+  view-projection at `c4` to `c7` during them is the light's: orthographic, 2/64 across, with the
+  player at its middle. A projected read of the texture compares, one in the open and nought under
+  cover. Seen in a running game (GOG v1.03); a room's interior reads covered. Tree crowns cover
+  too: their leaves are drawn into it through the foliage vertex shaders, and without those draws
+  the ground under a tree reads open (seen in a running game, GOG v1.03).
+- **Layout in the Windows build:** the Steam and GOG `CRainComponent` sit 0x14 lower than the server's
+  from the light on: the drops' particle handle at `+0x24`, the light handle at `+0x54`, the started
+  flag at `+0x5D`, the rain direction at `+0xDC`.
+- **Splash rays:** each `CastRays` (Steam `0x100520E0`, frame time, `RET 4`) ray starts 64 m up at a
+  random point of a grid region round the player and runs 128 m along the rain direction against
+  collision filter `0x13`. `UpdateDelayedRayCasts` (`0x090A5090`) keeps each region's hits, the water
+  level standing in when it is higher, up to `uiMaxRaysPerRegion`, dropping the oldest for new ones,
+  and `GenerateSplashes` (Steam `0x10054070`, frame time, `RET 4`) places each frame's splashes on
+  random hits of one random region. The player's component casts 25 rays a second into 16 regions
+  of 8 m. The rays find nothing for the drops.
+- **Render config:** `DisableRain` and `RainNumSplashesPerSecond` beside `RainShadowMapSize`. The
+  splash count is 25 a second up to High, 30 on Very High and 35 on Ultra High
+  (`defaultrenderconfig.xml`).
 
 `BindTemplates` binds only the lighting, cloud and fog transitions, so nothing reads the two retail
 `Default.Transition.Rain` presets. `SetNewWeather` and `StartRain` are empty.
@@ -302,7 +388,8 @@ times `1.1 + 0.2 sin(2π × storm hour)`.
 - **Direction:** `EvaluateWindDirection` picks a new target within about ten degrees every
   240 × time-scale seconds, biased to keep turning the same way.
 
-`ApplyWindToEnvironment` (`0x09158660`) sends the force at `+0x3D8` and the direction at `+0x3DC` to:
+`ApplyWindToEnvironment` (`0x09158660`; Steam `0x10118AE0`, no arguments, `RET 0`) reads the force at
+`+0x3D8` and the direction at `+0x3DC`, in degrees, and sends them to:
 
 - RealTree's vegetation;
 - the clouds, which scroll at the force times 0.7;

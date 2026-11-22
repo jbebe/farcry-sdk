@@ -40,7 +40,7 @@ bool Latest(Found& out);
 void ReleaseDeviceObjects();
 
 // The effects that read the depth; it is gathered while any of them wants it.
-enum class User : unsigned { Occlusion = 1, Haze = 2 };
+enum class User : unsigned { Occlusion = 1, Haze = 2, Ground = 4 };
 
 void SetWanted(User user, bool wanted);
 
