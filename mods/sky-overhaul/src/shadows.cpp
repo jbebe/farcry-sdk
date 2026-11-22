@@ -78,14 +78,12 @@ namespace {
         }
 
         // The shader leaves the sky and the weapon alone, which the engine's depth holds nothing
-        // for. The world target's alpha carries brightness for the bloom.
+        // for.
         device->SetTexture(0, g_halves.First().texture);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                           D3DCOLORWRITEENABLE_GREEN |
-                                                           D3DCOLORWRITEENABLE_BLUE);
+        draw.KeepAlpha();
         device->SetPixelShader(applyShader);
         return draw.ClipQuad(0.0f);
     }

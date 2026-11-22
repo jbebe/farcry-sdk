@@ -37,6 +37,8 @@ namespace {
 
     void DrawGreys();
 
+    using SkyOverhaul::Weather::Row;
+
     struct Parameter {
         // The key in the file and the label in the window.
         const char* key;
@@ -50,6 +52,10 @@ namespace {
         const char* format;
         // Shown when the row is hovered.
         const char* help;
+        // The value each weather carries for itself, which the slider edits for the weather on
+        // screen while the weather is on. Stored as "Weather <id> <key> = <value>" where it differs
+        // from the row's own.
+        float Row::*row = nullptr;
     };
 
     constexpr Category kSun = {"Sun"};
@@ -99,9 +105,9 @@ namespace {
          "%.2f", "How much of the filled land is the horizon's haze rather than earth."},
 
         {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
-         "How much of the sky the layer fills."},
+         "How much of the sky the layer fills.", &Row::coverage},
         {"Cloud density", &kCloudLayer, offsetof(Values, cloudDensity), 0.021f, 0.005f, 0.3f, "%.3f",
-         "How solid the cloud is where it is filled."},
+         "How solid the cloud is where it is filled.", &Row::density},
         {"Cloud detail", &kCloudLayer, offsetof(Values, cloudDetail), 0.7f, 0.0f, 1.0f, "%.2f",
          "How hard the cloud's edges are torn."},
         {"Cloud haze", &kCloudLayer, offsetof(Values, cloudHaze), 17910.0f, 300.0f, 20000.0f,
@@ -116,11 +122,11 @@ namespace {
          "How fast the layer drifts. The sky moves with it, since where it has drifted to follows "
          "from the game's clock."},
         {"Cirrus", &kHighCloud, offsetof(Values, cirrus), 0.41f, 0.0f, 1.0f, "%.2f",
-         "How much of the sky the high sheet of ice cloud reaches across."},
+         "How much of the sky the high sheet of ice cloud reaches across.", &Row::cirrus},
         {"Cirrus opacity", &kHighCloud, offsetof(Values, cirrusOpacity), 0.04f, 0.0f, 1.0f, "%.2f",
-         "How solid that sheet is where it reaches."},
+         "How solid that sheet is where it reaches.", &Row::cirrusOpacity},
         {"Contrails", &kHighCloud, offsetof(Values, contrails), 0.04f, 0.0f, 1.0f, "%.2f",
-         "How strongly the two aircraft trails show."},
+         "How strongly the two aircraft trails show.", &Row::contrails},
 
         {"Sun glare strength", &kSunGlare, offsetof(Values, glareStrength), 1.0f, 0.0f, 2.0f, "%.2f",
          "Peak brightness with the sun dead centre. Zero turns the glare off."},
@@ -288,22 +294,6 @@ namespace {
          "drawn toward the eye's."},
     };
 
-    using SkyOverhaul::Weather::Row;
-
-    // The values each weather carries for itself, which these sliders edit for the weather on
-    // screen while the weather is on. Stored as "Weather <id> <key> = <value>" where they differ
-    // from the row's own.
-    struct RowField {
-        size_t offset;
-        float Row::*field;
-    };
-    constexpr RowField kRowFields[] = {
-        {offsetof(Values, cloudCoverage), &Row::coverage},
-        {offsetof(Values, cloudDensity), &Row::density},
-        {offsetof(Values, cirrus), &Row::cirrus},
-        {offsetof(Values, cirrusOpacity), &Row::cirrusOpacity},
-        {offsetof(Values, contrails), &Row::contrails},
-    };
     constexpr std::string_view kRowPrefix = "Weather ";
 
     Values g_values = {};
@@ -317,25 +307,6 @@ namespace {
     float* Field(const Parameter& parameter) {
         return reinterpret_cast<float*>(reinterpret_cast<char*>(&g_values) + parameter.offset);
     }
-
-    const RowField* RowFieldOf(const Parameter& parameter) {
-        for (const RowField& field : kRowFields) {
-            if (field.offset == parameter.offset) {
-                return &field;
-            }
-        }
-        return nullptr;
-    }
-
-    const Parameter* ParameterAt(size_t offset) {
-        for (const Parameter& parameter : kParameters) {
-            if (parameter.offset == offset) {
-                return &parameter;
-            }
-        }
-        return nullptr;
-    }
-
 
     // Beside fcse.ini, in the folder the process was started from.
     const std::filesystem::path& File() {
@@ -373,11 +344,10 @@ namespace {
         const int row = space == std::string_view::npos
                             ? -1
                             : SkyOverhaul::Weather::Find(std::string(key.substr(0, space)).c_str());
-        for (const RowField& field : kRowFields) {
-            const Parameter* parameter = ParameterAt(field.offset);
-            if (row >= 0 && Trim(key.substr(space + 1)) == parameter->key) {
-                SkyOverhaul::Weather::Rows()[row].*field.field =
-                    std::clamp(value, parameter->min, parameter->max);
+        for (const Parameter& parameter : kParameters) {
+            if (row >= 0 && parameter.row != nullptr && Trim(key.substr(space + 1)) == parameter.key) {
+                SkyOverhaul::Weather::Rows()[row].*parameter.row =
+                    std::clamp(value, parameter.min, parameter.max);
             }
         }
         return true;
@@ -393,14 +363,15 @@ namespace {
         }
         for (size_t row = 0; row < g_rowDefaults.size(); row++) {
             const Row& tuned = SkyOverhaul::Weather::Rows()[row];
-            for (const RowField& field : kRowFields) {
-                if (tuned.*field.field == g_rowDefaults[row].*field.field) {
+            for (const Parameter& parameter : kParameters) {
+                if (parameter.row == nullptr ||
+                    tuned.*parameter.row == g_rowDefaults[row].*parameter.row) {
                     continue;
                 }
                 char value[32];
-                const char* end = std::to_chars(value, value + sizeof(value), tuned.*field.field).ptr;
+                const char* end = std::to_chars(value, value + sizeof(value), tuned.*parameter.row).ptr;
                 text.append(kRowPrefix).append(tuned.id).append(" ");
-                text.append(ParameterAt(field.offset)->key).append(" = ");
+                text.append(parameter.key).append(" = ");
                 text.append(value, end - value).append("\n");
             }
         }
@@ -471,9 +442,8 @@ namespace {
                 group = parameter.group;
                 ImGui::SeparatorText(group->name);
             }
-            const RowField* field = RowFieldOf(parameter);
-            float* value = weather != nullptr && field != nullptr ? &(weather->*field->field)
-                                                                  : Field(parameter);
+            float* value = weather != nullptr && parameter.row != nullptr ? &(weather->*parameter.row)
+                                                                          : Field(parameter);
             changed |= ImGui::SliderFloat(parameter.key, value, parameter.min, parameter.max,
                                           parameter.format, ImGuiSliderFlags_AlwaysClamp);
             ImGui::SetItemTooltip("%s", parameter.help);

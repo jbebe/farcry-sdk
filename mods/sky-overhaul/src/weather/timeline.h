@@ -62,9 +62,6 @@ Reading Hold(int row, const Moment& moment);
 // The cells over the whole map at a moment, as many as `capacity` holds, nearest the player first.
 int MapCells(const Moment& moment, bool rolled, Cell* out, int capacity);
 
-// Clock seconds for the wind to turn once round.
-inline constexpr double kWindTurn = 3.0 * 86400.0;
-
 // The clouds' drift round the circle the turning wind traces, in radians.
 double DriftAngle(double seconds);
 

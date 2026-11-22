@@ -30,6 +30,7 @@ namespace {
     float g_wetness = 0.0f;
     float g_rain = 0.0f;
     float g_puddles = 0.0f;
+    float g_clock = 0.0f;
     float g_daylight = 1.0f;
 
     class Changes {
@@ -64,10 +65,11 @@ namespace {
     };
 }
 
-void SkyOverhaul::Wet::Set(float wetness, float rain, float puddles) {
+void SkyOverhaul::Wet::Set(float wetness, float rain, float puddles, float clock) {
     g_wetness = wetness;
     g_rain = rain;
     g_puddles = puddles;
+    g_clock = clock;
     CloudLayer::Lighting lighting;
     if (CloudLayer::Latest(lighting)) {
         g_daylight = 1.0f - SkyModel::Night(lighting.sunDirection[2]);
@@ -84,6 +86,10 @@ float SkyOverhaul::Wet::Wetness() {
 
 float SkyOverhaul::Wet::Rain() {
     return g_rain;
+}
+
+float SkyOverhaul::Wet::Clock() {
+    return g_clock;
 }
 
 void SkyOverhaul::Wet::Shine(IDirect3DDevice9* device, const uint8_t* shine,

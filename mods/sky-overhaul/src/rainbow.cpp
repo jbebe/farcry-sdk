@@ -84,8 +84,7 @@ void SkyOverhaul::Rainbow::OnScenePass(const Frame::Pass& pass) {
         sun[0], sun[1], sun[2], 0.0f,
         fill[0], fill[1], 0.0f, 0.0f,
         g_foot, kKept, std::acos(rise), 0.0f};
-    // Added over the sky and the clouds where the world drew nothing, leaving the alpha the bloom
-    // reads.
+    // Added over the sky and the clouds where the world drew nothing.
     ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
     pass.device->SetPixelShader(shader);
     pass.device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
@@ -94,9 +93,7 @@ void SkyOverhaul::Rainbow::OnScenePass(const Frame::Pass& pass) {
     pass.device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     pass.device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
     pass.device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-    pass.device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                            D3DCOLORWRITEENABLE_GREEN |
-                                                            D3DCOLORWRITEENABLE_BLUE);
+    draw.KeepAlpha();
     draw.ClipQuad(Frame::kFarDepth, view.corners);
 }
 

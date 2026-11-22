@@ -1,6 +1,7 @@
 #include "sky.h"
 
 #include "angles.h"
+#include "blend.h"
 #include "sky_model.h"
 
 #include "engine/camera.h"
@@ -136,14 +137,8 @@ namespace {
         return kLandByHour[before] + (after - kLandByHour[before]) * (hour - std::floor(hour));
     }
 
-    float Luminance(const float colour[3]) {
-        return colour[0] * 0.299f + colour[1] * 0.587f + colour[2] * 0.114f;
-    }
-
-    float SmoothStep(float from, float to, float value) {
-        const float t = std::clamp((value - from) / (to - from), 0.0f, 1.0f);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    using SkyOverhaul::Luma;
+    using SkyOverhaul::Smooth;
 
     // How many times brighter the zenith has to be drawn to look as it would under an overhead sun,
     // measured by the model on clean air. Haze is left out on purpose: with the sun overhead its
@@ -155,12 +150,12 @@ namespace {
         float now[3];
         SkyOverhaul::SkyModel::Radiance(up, up, eyeHeight, 0.0f, intensity, overhead);
         SkyOverhaul::SkyModel::Radiance(up, sun, eyeHeight, 0.0f, intensity, now);
-        const float nowLuminance = Luminance(now);
+        const float nowLuminance = Luma(now);
         const float lift =
             nowLuminance > 1.0e-6f
-                ? std::clamp(Luminance(overhead) / nowLuminance, 1.0f, kZenithHoldMax)
+                ? std::clamp(Luma(overhead) / nowLuminance, 1.0f, kZenithHoldMax)
                 : kZenithHoldMax;
-        const float kept = SmoothStep(kZenithHoldLow, kZenithHoldHigh, sun[2]);
+        const float kept = Smooth(kZenithHoldLow, kZenithHoldHigh, sun[2]);
         return 1.0f + (lift - 1.0f) * kept;
     }
 
@@ -194,7 +189,7 @@ namespace {
         const SkyOverhaul::Tuning::Values v = SkyOverhaul::Tuning::Current();
         float hour = 12.0f;
         SkyOverhaul::TimeOfDay::Hour(hour);
-        SkyOverhaul::FogTint::SetDusk(SmoothStep(kDuskStart, kDuskEnd, lighting.sunDirection[2]),
+        SkyOverhaul::FogTint::SetDusk(Smooth(kDuskStart, kDuskEnd, lighting.sunDirection[2]),
                                       v.duskFogBrightness, lighting.sunDirection);
 
         float fill[2];

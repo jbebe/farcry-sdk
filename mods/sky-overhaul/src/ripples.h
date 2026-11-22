@@ -8,8 +8,8 @@
 
 namespace SkyOverhaul::Ripples {
 
-// Draws this frame's rings for the next frame's water, at the rain's strength.
-void OnScenePass(const Frame::Pass& pass, float rain);
+// Draws this frame's rings for the next frame's water, at the rain's strength and the rings' clock.
+void OnScenePass(const Frame::Pass& pass, float rain, float clock);
 
 // The map the last pass drew, or null when it rains no longer or the device would not take it.
 IDirect3DTexture9* Texture();

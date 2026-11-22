@@ -1,5 +1,6 @@
 #include "weather/timeline.h"
 
+#include "blend.h"
 #include "hash.h"
 
 #include <algorithm>
@@ -14,6 +15,8 @@ namespace {
     constexpr double kDay = 24.0 * kHour;
     constexpr double kPi = 3.14159265358979;
     constexpr uint32_t kSeed = 0x57EA7u;
+    // Clock seconds for the wind to turn once round.
+    constexpr double kWindTurn = 3.0 * kDay;
 
     // How long an air mass lasts on average, how far either way its start moves, and over how long
     // one turns into the next; a storm's own stages turn faster.
@@ -146,14 +149,8 @@ namespace {
         return std::clamp(value, 0.0f, 1.0f);
     }
 
-    float Mix(float a, float b, float t) {
-        return a + (b - a) * t;
-    }
-
-    float Smooth(float t) {
-        t = Clamp01(t);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    using SkyOverhaul::Mix;
+    using SkyOverhaul::Smooth;
 
     Levers RowLevers(int row) {
         return SkyOverhaul::Weather::FromRow(SkyOverhaul::Weather::Rows()[row]);
@@ -382,6 +379,31 @@ namespace {
         return -1.0;
     }
 
+    // `moment` moved to the look-back lattice point before `t` and the since-rain grid spot round
+    // the player, which what was looked back over is kept for.
+    SkyOverhaul::Weather::Moment Snapped(double t, const SkyOverhaul::Weather::Moment& moment) {
+        SkyOverhaul::Weather::Moment at = moment;
+        at.seconds = std::floor(t / kLookBack) * kLookBack;
+        at.x = std::round(moment.x / kSinceGrid) * kSinceGrid;
+        at.y = std::round(moment.y / kSinceGrid) * kSinceGrid;
+        return at;
+    }
+
+    // What a snapped moment's look back is kept under.
+    struct Spot {
+        double at = -1.0;
+        float x = 0.0f;
+        float y = 0.0f;
+        int world = 0;
+        double planted = 0.0;
+
+        explicit Spot(const SkyOverhaul::Weather::Moment& snapped)
+            : at(snapped.seconds), x(snapped.x), y(snapped.y), world(snapped.world),
+              planted(snapped.planted.at) {}
+        Spot() = default;
+        bool operator==(const Spot&) const = default;
+    };
+
     // Game seconds since rain last fell here, nought while it falls, below nought for none lately:
     // the look back from the lattice point before `t`, kept while the player stays on one spot of
     // the since-rain grid.
@@ -390,21 +412,13 @@ namespace {
             return 0.0;
         }
         struct Kept {
-            double at;
-            float x;
-            float y;
-            int world;
-            double planted;
+            Spot spot;
             double since;
         };
-        static thread_local Kept kept = {-1.0};
-        SkyOverhaul::Weather::Moment at = moment;
-        at.seconds = std::floor(t / kLookBack) * kLookBack;
-        at.x = std::round(moment.x / kSinceGrid) * kSinceGrid;
-        at.y = std::round(moment.y / kSinceGrid) * kSinceGrid;
-        if (kept.at != at.seconds || kept.x != at.x || kept.y != at.y || kept.world != at.world ||
-            kept.planted != at.planted.at) {
-            kept = {at.seconds, at.x, at.y, at.world, at.planted.at, LookBack(at.seconds, at)};
+        static thread_local Kept kept = {};
+        const SkyOverhaul::Weather::Moment at = Snapped(t, moment);
+        if (kept.spot != Spot(at)) {
+            kept = {Spot(at), LookBack(at.seconds, at)};
         }
         if (kept.since != 0.0) {
             return kept.since < 0.0 ? kept.since : kept.since + (t - at.seconds);
@@ -417,21 +431,13 @@ namespace {
     // rain is kept while the player stays on one spot of the since-rain grid.
     float Puddles(double t, const SkyOverhaul::Weather::Moment& moment) {
         struct Kept {
-            double at;
-            float x;
-            float y;
-            int world;
-            double planted;
+            Spot spot;
             float rain[kPuddleSteps + 1];
         };
-        static thread_local Kept kept = {-1.0};
-        SkyOverhaul::Weather::Moment at = moment;
-        at.seconds = std::floor(t / kLookBack) * kLookBack;
-        at.x = std::round(moment.x / kSinceGrid) * kSinceGrid;
-        at.y = std::round(moment.y / kSinceGrid) * kSinceGrid;
-        if (kept.at != at.seconds || kept.x != at.x || kept.y != at.y || kept.world != at.world ||
-            kept.planted != at.planted.at) {
-            kept = {at.seconds, at.x, at.y, at.world, at.planted.at};
+        static thread_local Kept kept = {};
+        const SkyOverhaul::Weather::Moment at = Snapped(t, moment);
+        if (kept.spot != Spot(at)) {
+            kept.spot = Spot(at);
             for (int step = 0; step <= kPuddleSteps; step++) {
                 const double start = at.seconds - step * kLookBack;
                 const float rain = WithCells(AirMassAt(start).levers, at, start, true).levers.rain;
@@ -585,8 +591,9 @@ SkyOverhaul::Weather::Reading SkyOverhaul::Weather::Read(const Moment& moment) {
     AddFog(levers, {kMorningFog, {kMistTint[0], kMistTint[1], kMistTint[2]}, 1.0f, kMistTop}, morning);
     AddFog(levers, {kRainMist, {kMistTint[0], kMistTint[1], kMistTint[2]}, 1.0f, kMistTop}, rainMist);
     Finish(reading, moment, drying);
-    reading.puddles = Puddles(t, moment) * DesertDry(moment);
-    reading.bow = Bow(levers.rain, since) * DesertDry(moment);
+    const float desertDry = DesertDry(moment);
+    reading.puddles = Puddles(t, moment) * desertDry;
+    reading.bow = Bow(levers.rain, since) * desertDry;
     return reading;
 }
 

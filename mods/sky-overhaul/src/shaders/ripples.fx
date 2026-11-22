@@ -43,7 +43,9 @@ float4 RipplesPS(float2 pixel : VPOS) : COLOR {
     const float cells = Rain.z;
     float2 slope = Rings(uv, cells, lerp(1.2f, 2.6f, Rain.x), 3.0f);
     // A downpour lands a second, finer crowd of drops between the first.
-    slope += Rings(uv, cells * 2.0f, 3.5f, 5.0f) * smoothstep(0.4f, 1.0f, Rain.x) * 0.7f;
+    [branch] if (Rain.x > 0.4f) {
+        slope += Rings(uv, cells * 2.0f, 3.5f, 5.0f) * smoothstep(0.4f, 1.0f, Rain.x) * 0.7f;
+    }
     // The swell the rain falls on, tiling with the map.
     const float3 at = float3(uv, Rain.y * 0.02f);
     const float2 swell = float2(tex3Dlod(ShapeNoise, float4(at, 0.0f)).r,

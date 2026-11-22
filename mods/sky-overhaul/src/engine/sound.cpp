@@ -3,7 +3,8 @@
 #include "fcse_api.h"
 
 namespace {
-    // A counted reference to a bank; `requested` says whether it holds a load request.
+    // The engine's counted reference to a bank, which it fills; `requested` says whether it holds a
+    // load request.
     struct SoundResourceRef {
         void* resource;
         bool requested;
@@ -22,10 +23,16 @@ namespace {
     constexpr size_t kRequestLoadSlot = 0x08 / sizeof(void*);
     constexpr size_t kPlaySoundSlot = 0x9C / sizeof(void*);
     constexpr int kMostHeld = 8;
+    // The sound type of everything not placed in the world.
+    constexpr int32_t kEffectNonLocal = 12;
+
+    struct Held {
+        uint32_t id;
+        SoundResourceRef ref;
+    };
 
     bool g_ready = false;
-    SoundResourceRef g_held[kMostHeld] = {};
-    uint32_t g_heldIds[kMostHeld] = {};
+    Held g_held[kMostHeld] = {};
     int g_heldCount = 0;
 
     template <typename Fn>
@@ -47,21 +54,21 @@ void SkyOverhaul::Sound::Hold(uint32_t id) {
         return;
     }
     for (int i = 0; i < g_heldCount; i++) {
-        if (g_heldIds[i] == id) {
+        if (g_held[i].id == id) {
             return;
         }
     }
-    SoundResourceRef& held = g_held[g_heldCount];
-    g_heldIds[g_heldCount++] = id;
-    g_getFromSoundId(&held, id, nullptr);
-    if (held.resource != nullptr) {
-        Slot<RequestLoadFn>(held.resource, kRequestLoadSlot)(held.resource);
+    Held& held = g_held[g_heldCount++];
+    held.id = id;
+    g_getFromSoundId(&held.ref, id, nullptr);
+    if (held.ref.resource != nullptr) {
+        Slot<RequestLoadFn>(held.ref.resource, kRequestLoadSlot)(held.ref.resource);
     }
 }
 
-void SkyOverhaul::Sound::Play(uint32_t id, int32_t type) {
+void SkyOverhaul::Sound::Play(uint32_t id) {
     void* system = g_ready ? g_getSoundSystem() : nullptr;
     if (system != nullptr) {
-        Slot<PlaySoundFn>(system, kPlaySoundSlot)(system, id, type, nullptr, 0.0f);
+        Slot<PlaySoundFn>(system, kPlaySoundSlot)(system, id, kEffectNonLocal, nullptr, 0.0f);
     }
 }

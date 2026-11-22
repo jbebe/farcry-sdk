@@ -98,3 +98,13 @@ float SkyOverhaul::Camera::BufferDepth(const View& view, float metres) {
     const float w = m[12] * p[0] + m[13] * p[1] + m[14] * p[2] + m[15];
     return w > 0.0f ? z / w : 0.0f;
 }
+
+void SkyOverhaul::Camera::FromEye(const float m[16], const float eye[3], float out[16]) {
+    std::memcpy(out, m, 16 * sizeof(float));
+    for (int row = 0; row < 4; row++) {
+        const float* r = m + row * 4;
+        out[row * 4 + 3] = static_cast<float>(static_cast<double>(r[0]) * eye[0] +
+                                              static_cast<double>(r[1]) * eye[1] +
+                                              static_cast<double>(r[2]) * eye[2] + r[3]);
+    }
+}

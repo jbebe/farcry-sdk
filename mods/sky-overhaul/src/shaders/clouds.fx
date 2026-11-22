@@ -37,6 +37,9 @@
 // stretch of it reads as drawn, short of the squiggle that would stop reading as a trail at all.
 #define TRAIL_WANDER 5.0f
 #define TRAIL_KINK 0.35f
+// The farthest from that line any of a trail shows, in its widths: the most it wanders, 3.4, and the
+// most it spreads, 5.4.
+#define TRAIL_REACH 9.0f
 
 // How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
@@ -129,15 +132,17 @@ float4 MoonGlow : register(c87);
 // along that, in the units the sheet is read in. w: the seed that tears it up, or nought for no trail.
 float4 Trails[TRAIL_COUNT] : register(c88);
 
-// Lightning in the cloud: xyz where the strike is, w how bright, for the two brightest now.
-float4 Flash[2] : register(c96);
+// Lightning in the cloud: xyz where the strike is, w how bright, for the brightest now, as many as
+// lightning.h's kFlashes.
+#define FLASHES 2
+float4 Flash[FLASHES] : register(c96);
 // How far through a cloud a strike's light reaches before a third of it is left, and its colour.
 #define FLASH_REACH 900.0f
 #define FLASH_COLOUR float3(0.82f, 0.88f, 1.0f)
 
 float3 Flashes(float3 at) {
     float glow = 0.0f;
-    [unroll] for (int i = 0; i < 2; i++) {
+    [unroll] for (int i = 0; i < FLASHES; i++) {
         glow += Flash[i].w * exp(-length(at - Flash[i].xyz) / FLASH_REACH);
     }
     return FLASH_COLOUR * glow;
@@ -171,14 +176,16 @@ float4 CellAt(float2 world) {
     return tex2Dlod(CellMap, float4(world * CELL_MAP_SCALE + CELL_MAP_OFFSET, 0.0f, 0.0f));
 }
 
-// How much cloud stands at a point. `cheap` skips the erosion, which is most of the cost and none
-// of the shape, and is what the samples toward the light use.
-float Density(float3 world, uniform bool cheap) {
+// How much cloud stands at a point, with the cell map's rain there in `water`. `cheap` skips the
+// erosion, which is most of the cost and none of the shape, and is what the samples toward the
+// light use.
+float Density(float3 world, uniform bool cheap, out float water) {
     float height = saturate((world.z - Layer.x) / Layer.y);
 
     float2 weatherUv = (world.xy + Wind.zw) * Grain.z;
     float3 weather = tex2Dlod(WeatherMap, float4(weatherUv, 0.0f, 0.0f)).rgb;
     float4 cell = CellAt(world.xy);
+    water = cell.b;
     // Half is neutral, so the slider opens the sky out from the map or closes it down to nothing.
     // A cell fills the sky toward a crowd of towers, whose edges the shape below still carves, and
     // closes it over its raining heart.
@@ -211,6 +218,11 @@ float Density(float3 world, uniform bool cheap) {
     float erosion = lerp(1.0f - fine, fine, saturate(height * 4.0f));
     density = saturate(Remap(density, erosion * Grain.w, 1.0f, 0.0f, 1.0f));
     return density * solid;
+}
+
+float Density(float3 world, uniform bool cheap) {
+    float water;
+    return Density(world, cheap, water);
 }
 
 // Whether the light is still above the horizon as seen from this height, from one in full view to
@@ -257,6 +269,9 @@ float Contrail(float2 at, float3 path, float seed) {
         return 0.0f;
     }
     float across = dot(at, path.xy) - path.z;
+    [branch] if (abs(across) > Trail.y * TRAIL_REACH) {
+        return 0.0f;
+    }
     float along = dot(at, float2(-path.y, path.x));
 
     // The aircraft flew straight; what it left did not stay that way. Air at that altitude does not
@@ -418,9 +433,6 @@ float4 March(float3 rayIn, float2 screen) {
         acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / PI;
     float3 horizon = Veiled(FogColour.rgb + FogColourRange.rgb * fogHeading, FogColour.w);
 
-    float cirrusCover = 0.0f;
-    float3 cirrus = HighCloud(ray, cosAngle, horizon, cirrusCover);
-
     float transmittance = 1.0f;
     float3 scattered = 0.0f;
     [loop] for (int i = 0; i < VIEW_STEPS; i++) {
@@ -430,7 +442,8 @@ float4 March(float3 rayIn, float2 screen) {
             break;
         }
         float3 at = Eye.xyz + ray * (enter + ((float)i + dither) * stride);
-        float density = Density(at, false);
+        float water;
+        float density = Density(at, false, water);
         if (density > 0.0005f) {
             float lit = LightReach(at);
 
@@ -442,7 +455,6 @@ float4 March(float3 rayIn, float2 screen) {
 
             // A cell stands far deeper than the layer, which the light reaching its base makes up for.
             float height = saturate((at.z - Layer.x) / Layer.y);
-            float water = CellAt(at.xy).b;
             float shade = max(AmbientColour.w, CELL_SHADE * water);
             float3 light = (Scatter(lit, lobes) * thin +
                             BackColour.rgb * lit * saturate(-cosAngle)) * above *
@@ -475,10 +487,14 @@ float4 March(float3 rayIn, float2 screen) {
     float3 colour = lerp(scattered * reach, horizon * cover, fog);
 
     // The sheet is above the layer, so from below it is behind it: what it sends down arrives
-    // dimmed by however much of the layer stands in the way.
+    // dimmed by however much of the layer stands in the way, and behind a solid cloud none does.
     float through = 1.0f - cover;
-    colour += cirrus * cirrusCover * through;
-    cover += cirrusCover * through;
+    [branch] if (through >= 0.01f) {
+        float cirrusCover = 0.0f;
+        float3 cirrus = HighCloud(ray, cosAngle, horizon, cirrusCover);
+        colour += cirrus * cirrusCover * through;
+        cover += cirrusCover * through;
+    }
 
     // The moon's glow is behind both layers, and dithered wherever it is lit: a faint gradient on a
     // black sky is where eight bits a channel band worst.
@@ -536,10 +552,11 @@ float Cover(float3 rayIn, float dither, uniform bool cheap) {
         }
     }
     float cover = (1.0f - transmittance) * reach;
-
-    float cirrusCover = 0.0f;
-    HighCloud(ray, dot(ray, Light.xyz), 0.0f, cirrusCover);
-    cover += cirrusCover * (1.0f - cover);
+    [branch] if (cover <= 0.99f) {
+        float cirrusCover = 0.0f;
+        HighCloud(ray, dot(ray, Light.xyz), 0.0f, cirrusCover);
+        cover += cirrusCover * (1.0f - cover);
+    }
     return cover + Filled(ray, FogColourVector.zw) * (1.0f - cover);
 }
 

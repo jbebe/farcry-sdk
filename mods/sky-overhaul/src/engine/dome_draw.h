@@ -75,7 +75,7 @@ void SetShine(ShineFn shine);
 
 // The effects that read the linear depth; the draws that read it are watched for its texture while
 // any of them wants it.
-enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4, Clouds = 8, Rain = 16 };
+enum class DepthUser : unsigned { Shadows = 1, Occlusion = 2, Haze = 4, Clouds = 8, Ground = 16 };
 
 void SetWatchDepth(DepthUser user, bool watch);
 

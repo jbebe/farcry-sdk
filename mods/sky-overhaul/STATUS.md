@@ -23,7 +23,7 @@ Stage: maintenance
 - [done] Ambient occlusion, on by default since 1.6.0 - fades into fog
 - [done] Grass lit by the sun: dark roots, sheen, light through the blades - user: "looks nice"; bent and shadowless grass not covered
 - [done] Tree leaves lit one by one - user: "perfect"
-- [done] Sun shadows reach farther and turn in half-degree steps so building shadows hold still - user-picked ranges 51/100/207 m
+- [done] Sun shadows reach farther and turn in half-degree steps so building shadows hold still - user-picked ranges 51/100/207 m; none drawn at full night while the moon gives under 15% of the light (before moonrise, overcast, storm), moonlit nights keep the ranges - user: "if its pitch dark then we can turn off shadows of course. but during moonlight, we should use the one we have during daylight" (2026-11-22); fc2drive at 23:30, 01:30, 03:30: C1 and C5 on once the moon is up, O1 and S3 off, no flicker; S3 at 23:00, RTX 4060 Ti at 1080p: 5.53 to 3.50 ms a frame, Sky Overhaul's share 2.52 to 1.26 ms GPU (switches.py)
 - [done] Dusk fog: the land's fog darkens as the sun sets - the user has not confirmed the one-frame flash fix
 - [done] Daytime ambient lift in the clear preset, up to 1.7x at noon - widened at the user's call after a tester's report
 - [done] Film grain

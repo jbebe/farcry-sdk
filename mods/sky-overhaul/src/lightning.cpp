@@ -1,5 +1,7 @@
 #include "lightning.h"
 
+#include "blend.h"
+#include "hash.h"
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/screen_draw.h"
@@ -143,7 +145,7 @@ namespace {
 
     struct BoltVertex {
         float x, y, z, rhw;
-        float shape[4];
+        float shape[3];
     };
 
     bool g_enabled = false;
@@ -185,16 +187,10 @@ namespace {
     std::vector<BoltVertex> g_vertices;
 
     float Unit() {
-        g_random ^= g_random << 13;
-        g_random ^= g_random >> 17;
-        g_random ^= g_random << 5;
-        return static_cast<float>(g_random >> 8) / 16777216.0f;
+        return SkyOverhaul::NextUnit(g_random);
     }
 
-    float Smooth(float t) {
-        t = std::clamp(t, 0.0f, 1.0f);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    using SkyOverhaul::Smooth;
 
     // How bright a strike is `age` real seconds after it was born: held, then each pulse flaring and
     // dying away over `decay`. Below nought once it is over.
@@ -447,7 +443,7 @@ namespace {
                 return BoltVertex{j.at.x + j.across[0] * side * j.halfWidth - 0.5f,
                                   j.at.y + j.across[1] * side * j.halfWidth - 0.5f,
                                   std::clamp(j.at.z, 0.0f, 1.0f), 1.0f / j.at.w,
-                                  {side, j.strength, sharpness, 0.0f}};
+                                  {side, j.strength, sharpness}};
             };
             const BoltVertex quad[4] = {vertex(joints[i], -1.0f), vertex(joints[i], 1.0f),
                                         vertex(joints[i + 1], -1.0f), vertex(joints[i + 1], 1.0f)};
@@ -547,12 +543,9 @@ namespace {
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-        // The world target's alpha carries brightness for the bloom.
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                           D3DCOLORWRITEENABLE_GREEN |
-                                                           D3DCOLORWRITEENABLE_BLUE);
+        draw.KeepAlpha();
         device->SetPixelShader(shader);
-        device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE4(0));
+        device->SetFVF(D3DFVF_XYZRHW | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE3(0));
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(g_vertices.size() / 3),
                                 g_vertices.data(), sizeof(BoltVertex));
     }
@@ -645,7 +638,7 @@ void SkyOverhaul::Lightning::OnGameFrame() {
         }
     }
     for (int i = 0; i < count; i++) {
-        Sound::Play(due[i], Sound::kEffectNonLocal);
+        Sound::Play(due[i]);
     }
 }
 
@@ -654,8 +647,13 @@ void SkyOverhaul::Lightning::Flashes(float out[kFlashes * 4]) {
     for (int i = 0; i < g_count; i++) {
         const Strike& s = g_strikes[i];
         const float light = Brightness(s, g_now - s.born) * kCloudGlow;
-        // The dimmer of the two kept gives way to a brighter one.
-        float* slot = out[3] <= out[7] ? out : out + 4;
+        // The dimmest kept gives way to a brighter one.
+        float* slot = out;
+        for (unsigned k = 1; k < kFlashes; k++) {
+            if (out[k * 4 + 3] < slot[3]) {
+                slot = out + k * 4;
+            }
+        }
         if (light > slot[3]) {
             slot[0] = s.at.x;
             slot[1] = s.at.y;

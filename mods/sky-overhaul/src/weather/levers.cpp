@@ -1,11 +1,11 @@
 #include "weather/levers.h"
 
+#include "blend.h"
+
 #include <algorithm>
 
 namespace {
-    float Mix(float a, float b, float t) {
-        return a + (b - a) * t;
-    }
+    using SkyOverhaul::Mix;
 }
 
 SkyOverhaul::Weather::Levers SkyOverhaul::Weather::FromRow(const Row& row) {

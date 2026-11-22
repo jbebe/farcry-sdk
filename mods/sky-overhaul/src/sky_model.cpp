@@ -1,5 +1,7 @@
 #include "sky_model.h"
 
+#include "blend.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -46,10 +48,7 @@ namespace {
     constexpr float kNightBegins = 0.05f;
     constexpr float kNightFull = -0.1f;
 
-    float Smooth(float from, float to, float value) {
-        const float t = std::clamp((value - from) / (to - from), 0.0f, 1.0f);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    using SkyOverhaul::Smooth;
 
     float Dot(const float a[3], const float b[3]) {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];

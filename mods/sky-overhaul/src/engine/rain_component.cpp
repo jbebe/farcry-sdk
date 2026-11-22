@@ -60,14 +60,8 @@ namespace {
 
     template <class Fn>
     bool HookSite(const char* what, uintptr_t mapped, uintptr_t scanned, Fn detour, Fn& original) {
-        const uintptr_t target = SkyOverhaul::Locate(what, mapped, scanned);
-        if (target == 0) {
-            FCSE::Logf("rain: %s was not found in this build - the game's own stay", what);
-            return false;
-        }
-        return FCSE::ApiPointer()->Hook(reinterpret_cast<void*>(target),
-                                        reinterpret_cast<void*>(detour),
-                                        reinterpret_cast<void**>(&original));
+        return SkyOverhaul::HookAt(SkyOverhaul::Locate(what, mapped, scanned), detour, original,
+                                   "rain: %s was not found in this build - the game's own stay", what);
     }
 }
 

@@ -58,10 +58,8 @@ namespace {
             1.0f / static_cast<float>(solid.width), 1.0f / static_cast<float>(solid.height),
             0.5f * view.verticalScale * static_cast<float>(solid.height), 0.0f};
 
-        const float fog[kFogConstants * 4] = {
-            view.fogValues[0], view.fogValues[1], view.fogValues[2], view.eye[2],
-            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
-            view.fogHeightValues[3]};
+        float fog[kFogConstants * 4];
+        SkyOverhaul::DepthConstants::Fog(view, fog);
 
         SkyOverhaul::ScreenDraw draw(device, kFirstConstant,
                                      kFogConstant + kFogConstants - kFirstConstant);
@@ -82,16 +80,13 @@ namespace {
         }
 
         // Passes the depth test only where the world drew nearer than the occlusion fades out by.
-        // The world target's alpha carries brightness for the bloom, so it is left alone.
         device->SetTexture(0, g_halves.First().texture);
         device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
         device->SetRenderState(D3DRS_ZFUNC, D3DCMP_GREATER);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                           D3DCOLORWRITEENABLE_GREEN |
-                                                           D3DCOLORWRITEENABLE_BLUE);
+        draw.KeepAlpha();
         device->SetPixelShader(applyShader);
         return draw.ClipQuad(SkyOverhaul::Camera::BufferDepth(view, v.occlusionFadeDistance));
     }

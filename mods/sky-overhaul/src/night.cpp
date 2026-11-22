@@ -89,10 +89,7 @@ namespace {
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
         pass.device->SetRenderState(D3DRS_ZFUNC, D3DCMP_GREATER);
-        // The world target's alpha carries brightness for the bloom.
-        pass.device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                                D3DCOLORWRITEENABLE_GREEN |
-                                                                D3DCOLORWRITEENABLE_BLUE);
+        draw.KeepAlpha();
         pass.device->SetPixelShader(shader);
         pass.device->SetTexture(0, world);
         pass.device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);

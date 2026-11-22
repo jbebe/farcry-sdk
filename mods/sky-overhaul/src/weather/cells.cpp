@@ -1,5 +1,6 @@
 #include "weather/cells.h"
 
+#include "blend.h"
 #include "hash.h"
 #include "weather/timeline.h"
 #include "weather/zones.h"
@@ -64,10 +65,7 @@ namespace {
         return SkyOverhaul::Random(static_cast<int>(slot), i, k, seed);
     }
 
-    float Smooth(float t) {
-        t = std::clamp(t, 0.0f, 1.0f);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    using SkyOverhaul::Smooth;
 
     float Diurnal(double seconds) {
         const double hour = std::fmod(seconds, 24.0 * kHour) / kHour;

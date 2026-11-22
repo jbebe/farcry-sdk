@@ -180,6 +180,14 @@ update, so anything written over the storm factor there reaches the frame's ligh
 bytes; `UpdateSky` is `0x1011A380`, `UpdateLight` `0x1011A7C0` and the weather update `0x10118FB0`
 (RE-verified, Steam v1.03; the bytes match GOG v1.03).
 
+The two calls ask for different hours. `UpdateLight` passes the time of day; `UpdateSky` passes it
+remapped as `(t - 0.5) * k + 0.5`, with `k` read from the sky's descriptor (not traced), and clamped
+to 0..1. At night the two setups differ: at 01:30 on a clear night `UpdateSky`'s has almost no
+moonlight and about half the light multiplier `UpdateLight`'s has (seen in game, GOG v1.03). A hook
+on `GetFinalLighting` that acts on the scene light tells the calls apart by the return address, which
+for `UpdateLight` sits 33 bytes into
+`8D 4C 24 70 D9 5C 24 20 E8 ?? ?? ?? ?? D9 44 24 20 8D 44 24 70 50 51 8B CE D9 1C 24 E8`.
+
 `CDynamicEnvironmentManager::UpdateLight` (`0x0915F110`) then:
 
 - writes the ambient colour times `fAmbientLightHDRMul` to `CSceneSky` `+0x300`, the ground colour
@@ -188,7 +196,9 @@ bytes; `UpdateSky` is `0x1011A380`, `UpdateLight` `0x1011A7C0` and the weather u
 - compares their luma, weighted (0.3, 0.59, 0.11). If the moon's is greater, the scene's
   `CSceneLight` takes the moon's direction and colour; otherwise it takes the sun's, including when
   both are black;
-- sets the light's `fShadowFactor` (`+0x4C`) to 1 and its cast-shadow flag (`+0x48`) on, every frame;
+- sets the light's `fShadowFactor` (`+0x4C`) to 1 and its cast-shadow flag (`+0x48`) on, every frame,
+  with `C6 40 48 01` at `0x1011AC00`. Patching that immediate to 0 stops the shadow maps being drawn
+  at all, which is how a light too dark to show a shadow saves their cost;
 - returns whether the sun won, which `Update` keeps as `IsSunLight`.
 
 So moonlit shadows are in the stock engine. Whether they can be seen is decided by the lighting

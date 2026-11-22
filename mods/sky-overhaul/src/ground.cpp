@@ -1,11 +1,12 @@
 #include "ground.h"
 
+#include "blend.h"
 #include "depth_constants.h"
 #include "wet.h"
 
 #include "engine/camera.h"
-#include "engine/clock.h"
 #include "engine/depth_texture.h"
+#include "engine/dome_draw.h"
 #include "engine/frame_copy.h"
 #include "engine/noise.h"
 #include "engine/rain_cover.h"
@@ -33,22 +34,18 @@ namespace {
     // how far out the wet reaches, in metres.
     constexpr float kFoliageDepth = 0.15f;
     constexpr float kReach = 150.0f;
-    // How far open ground darkens toward mud, nought to one.
-    constexpr float kMud = 1.0f;
     // The sky overhead against the sky low down, and how many times the sky's brightness a pixel
     // has to be to keep its light.
     constexpr float kOverhead = 1.15f;
     constexpr float kLit = 2.0f;
-    // The patterns repeat every this many metres, and the rain's clock wraps every this many seconds.
+    // The patterns repeat every this many metres.
     constexpr double kRepeat = 256.0;
-    constexpr double kClockWrap = 4096.0;
 
+    // ground.fx's DRIEST.
     constexpr float kDriest = 0.003f;
 
     bool g_enabled = false;
     SkyOverhaul::PixelShader g_shader{"ground", g_groundPixelShader};
-    SkyOverhaul::Stopwatch g_stopwatch;
-    double g_seconds = 0.0;
 
     float Wrap(double value, double period) {
         return static_cast<float>(value - std::floor(value / period) * period);
@@ -56,8 +53,7 @@ namespace {
 
     void Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::DepthTexture::Found& depth,
-              const SkyOverhaul::SolidDepth::Found& solid, float wetness, float rain,
-              float puddles) {
+              const SkyOverhaul::SolidDepth::Found& solid, float wetness) {
         IDirect3DDevice9* device = pass.device;
         IDirect3DPixelShader9* shader = g_shader.Get(device);
         if (shader == nullptr || !SkyOverhaul::Noise::Ensure(device)) {
@@ -70,16 +66,17 @@ namespace {
 
         float projection[2];
         SkyOverhaul::SolidDepth::Projection(view, projection);
+        float fogValues[8];
+        SkyOverhaul::DepthConstants::Fog(view, fogValues);
         const float* fog = view.fogColour;
-        const float brightness = fog[0] * 0.299f + fog[1] * 0.587f + fog[2] * 0.114f;
         const float own[kOwnConstants * 4] = {
             projection[0], projection[1], kFoliageDepth, kReach,
-            wetness, rain, puddles, Wrap(g_seconds, kClockWrap),
-            view.fogValues[0], view.fogValues[1], view.fogValues[2], view.eye[2],
-            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
-            view.fogHeightValues[3],
-            fog[0], fog[1], fog[2], kMud,
-            fog[0] * kOverhead, fog[1] * kOverhead, fog[2] * kOverhead, brightness * kLit,
+            wetness, SkyOverhaul::Wet::Rain(), SkyOverhaul::Wet::Puddles(), SkyOverhaul::Wet::Clock(),
+            fogValues[0], fogValues[1], fogValues[2], fogValues[3],
+            fogValues[4], fogValues[5], fogValues[6], fogValues[7],
+            fog[0], fog[1], fog[2], 0.0f,
+            fog[0] * kOverhead, fog[1] * kOverhead, fog[2] * kOverhead,
+            SkyOverhaul::Luma(fog) * kLit,
             Wrap(view.eye[0], kRepeat), Wrap(view.eye[1], kRepeat),
             1.0f / static_cast<float>(solid.width), 1.0f / static_cast<float>(solid.height)};
         float cover[16];
@@ -99,18 +96,11 @@ namespace {
         device->SetTexture(kCoverSampler,
                            SkyOverhaul::RainCover::LastSeen(found) ? found.texture : nullptr);
         device->SetTexture(kShapeSampler, SkyOverhaul::Noise::Shape());
-        for (D3DSAMPLERSTATETYPE axis : {D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_ADDRESSW}) {
-            device->SetSamplerState(kShapeSampler, axis, D3DTADDRESS_WRAP);
-        }
+        draw.Wrap(kShapeSampler);
         // Filtered, a shadow texture's projected read is a soft compare.
-        for (DWORD sampler : {kCoverSampler, kShapeSampler}) {
-            device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-            device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        }
-        // The world target's alpha carries brightness for the bloom.
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                           D3DCOLORWRITEENABLE_GREEN |
-                                                           D3DCOLORWRITEENABLE_BLUE);
+        draw.Linear(kCoverSampler);
+        draw.Linear(kShapeSampler);
+        draw.KeepAlpha();
         device->SetPixelShader(shader);
         draw.ClipQuad(0.0f, view.corners);
     }
@@ -118,18 +108,19 @@ namespace {
 
 void SkyOverhaul::Ground::SetEnabled(bool enabled) {
     g_enabled = enabled;
-    SolidDepth::SetWanted(SolidDepth::User::Ground, enabled);
+    SolidDepth::SetWanted(SolidDepth::User::Ground, false);
+    DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Ground, enabled);
 }
 
 void SkyOverhaul::Ground::OnScenePass(const Frame::Pass& pass) {
     if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
-    const float seconds = g_stopwatch.Lap();
     const float wetness = Wet::Wetness();
-    const float rain = Wet::Rain();
-    g_seconds += seconds;
-    if (wetness < kDriest) {
+    const bool wet = wetness >= kDriest;
+    // Open ground is told from grass by the depth without it, wanted only while there is wet to draw.
+    SolidDepth::SetWanted(SolidDepth::User::Ground, wet);
+    if (!wet) {
         return;
     }
     Camera::View view;
@@ -137,7 +128,7 @@ void SkyOverhaul::Ground::OnScenePass(const Frame::Pass& pass) {
     SolidDepth::Found solid = {};
     if (Camera::Read(pass.device, view) && view.verticalScale != 0.0f &&
         DepthTexture::Latest(depth) && SolidDepth::Latest(solid)) {
-        Draw(pass, view, depth, solid, wetness, rain, Wet::Puddles());
+        Draw(pass, view, depth, solid, wetness);
     }
 }
 

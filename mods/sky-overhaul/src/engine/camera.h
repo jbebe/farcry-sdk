@@ -52,4 +52,8 @@ bool Read(IDirect3DDevice9* device, View& out);
 // The depth buffer's value for a point `metres` along the camera's axis.
 float BufferDepth(const View& view, float metres);
 
+// A world transform `m`, row by row, moved to `eye`: the same transform of a point given relative to
+// it, worked in double so the world's large coordinates cancel.
+void FromEye(const float m[16], const float eye[3], float out[16]);
+
 }

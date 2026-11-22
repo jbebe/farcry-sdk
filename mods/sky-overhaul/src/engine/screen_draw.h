@@ -95,6 +95,12 @@ public:
     ScreenDraw(IDirect3DDevice9* device, UINT firstConstant, UINT constantCount);
     ~ScreenDraw();
 
+    // Colour alone from here on: the world target's alpha carries brightness for the bloom.
+    void KeepAlpha();
+    // A sampler filtered between texels, and one that repeats on every axis.
+    void Linear(DWORD sampler);
+    void Wrap(DWORD sampler);
+
 private:
     static constexpr D3DRENDERSTATETYPE kRenderStates[] = {
         D3DRS_ZENABLE,         D3DRS_ZWRITEENABLE,      D3DRS_ZFUNC,

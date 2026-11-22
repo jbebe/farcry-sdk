@@ -80,11 +80,6 @@ namespace {
         pass.device->SetPixelShader(blurShader);
         g_mask.Blur(pass.device, draw, kAxisConstant);
     }
-
-    void Filter(IDirect3DDevice9* device, DWORD sampler) {
-        device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    }
 }
 
 void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
@@ -108,8 +103,8 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     const float heat =
         std::clamp((lighting.sunDirection[2] - kHeatLow) / (kHeatHigh - kHeatLow), 0.0f, 1.0f) *
         Weather::AirNow(lighting.storm).heat;
-    // The mirage tells bare ground from grass by the depth without it.
-    SolidDepth::SetWanted(SolidDepth::User::Haze, v.mirageStrength > 0.0f);
+    // The mirage tells bare ground from grass by the depth without it, wanted only while one shows.
+    SolidDepth::SetWanted(SolidDepth::User::Haze, heat * v.mirageStrength >= kFaintest);
     SolidDepth::Found solid = {};
     const float mirage = SolidDepth::Latest(solid) ? heat * v.mirageStrength : 0.0f;
     if ((std::max)(heat * v.hazeStrength, mirage) < kFaintest) {
@@ -154,10 +149,7 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
         DrawMask(pass, draw, maskShader, blurShader);
     }
 
-    // The world target's alpha carries brightness for the bloom.
-    device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                       D3DCOLORWRITEENABLE_GREEN |
-                                                       D3DCOLORWRITEENABLE_BLUE);
+    draw.KeepAlpha();
     device->SetPixelShader(shader);
     device->SetTexture(0, world);
     device->SetTexture(kMaskSampler, masked ? g_mask.First().texture : nullptr);
@@ -165,11 +157,9 @@ void SkyOverhaul::Haze::OnScenePass(const Frame::Pass& pass) {
     // The bend moves a look by fractions of a pixel, the mask is half the size, and the turbulence
     // is a few texels a cell.
     for (DWORD sampler : {DWORD{0}, kMaskSampler, kTurbulenceSampler}) {
-        Filter(device, sampler);
+        draw.Linear(sampler);
     }
-    for (D3DSAMPLERSTATETYPE axis : {D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_ADDRESSW}) {
-        device->SetSamplerState(kTurbulenceSampler, axis, D3DTADDRESS_WRAP);
-    }
+    draw.Wrap(kTurbulenceSampler);
     draw.ClipQuad(0.0f);
 }
 
@@ -182,6 +172,6 @@ void SkyOverhaul::Haze::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Haze::SetEnabled(bool enabled) {
     g_enabled = enabled;
-    SolidDepth::SetWanted(SolidDepth::User::Haze, enabled);
+    SolidDepth::SetWanted(SolidDepth::User::Haze, false);
     DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Haze, enabled);
 }

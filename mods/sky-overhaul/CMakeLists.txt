@@ -91,6 +91,7 @@ set(SHADER_PASSES
 
 # Included by more than one shader source, so any change to them recompiles them all.
 set(SHADER_INCLUDES
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/cover.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/depth.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/foliage.inc.fx"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/hash.inc.fx"

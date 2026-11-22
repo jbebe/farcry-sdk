@@ -14,10 +14,10 @@ float4 Projection : register(c96);
 // x: how wet the open world is; y: how hard it rains; z: how full the puddles are; w: the rain's
 // clock, in seconds, wrapped.
 float4 Wet : register(c97);
-// The engine's distance fog and the eye's height, then its height fog: as occlusion.fx reads them.
+// What EngineFogged reads the engine's fog from.
 float4 Fog : register(c98);
 float4 FogHeight : register(c99);
-// rgb: the sky low down, mirrored in puddles; w: how far the mud darkens open ground.
+// rgb: the sky low down, mirrored in puddles.
 float4 SkyLow : register(c100);
 // rgb: the sky overhead; w: the brightness above which a pixel is a light or a highlight.
 float4 SkyHigh : register(c101);
@@ -31,6 +31,8 @@ sampler2D Scene : register(s0);
 sampler3D ShapeNoise : register(s4);
 
 #define REPEAT 256.0f
+// Less wet than this is dry: ground.cpp's kDriest.
+#define DRIEST 0.003f
 // The puddles' pattern repeats every this many metres, its ragged edges every that many.
 #define PUDDLE_SIZE 16.0f
 #define PUDDLE_EDGE 4.0f
@@ -119,12 +121,6 @@ float3 Reflected(float3 at, float3 mirrored, float3 sky) {
     return sky;
 }
 
-float Fogged(float3 ray) {
-    return saturate(saturate(length(ray) * Fog.x + Fog.y) * Fog.z *
-                    (saturate((Fog.w + ray.z) * FogHeight.x + FogHeight.y) * FogHeight.z +
-                     FogHeight.w));
-}
-
 // A cell's own random values, the same wherever the eye stands within the repeat.
 float3 CellHash(float2 cell, float cells) {
     return Hash(float3(fmod(cell + cells, cells), 7.0f));
@@ -162,6 +158,13 @@ float4 GroundPS(float3 ray : TEXCOORD0, float2 pixel : VPOS) : COLOR {
     clip(z - NEAREST_GEOMETRY);
     const float3 at = ray * z;
     const float distance = length(at);
+    // Out of the wet's reach or lost in fog, before the depth reads that follow.
+    const float reached = Wet.x * (1.0f - EngineFogged(at, Fog, FogHeight)) *
+                          saturate(1.0f - distance / Projection.w);
+    [branch] if (reached < DRIEST) {
+        clip(-1.0f);
+        return 0.0f;
+    }
 
     // Grass and leaves stand in front of the solid depth, or of the sky where it has none, and stay
     // as they are. A read of the half-resolution solid depth can be off by as much as it steps to
@@ -176,9 +179,8 @@ float4 GroundPS(float3 ray : TEXCOORD0, float2 pixel : VPOS) : COLOR {
         min(abs(OnScreenMetres(uv + across) - solid), abs(OnScreenMetres(uv - across) - solid));
     const float margin = Projection.z + max(rowStep, columnStep);
     const float foliage = solid > 0.0f ? saturate((solid - z - margin) / Projection.z) : 1.0f;
-    const float wet = Wet.x * (1.0f - foliage) * (1.0f - Fogged(at)) *
-                      saturate(1.0f - distance / Projection.w) * Open(at, CoverTransform, UpRain);
-    clip(wet - 0.003f);
+    const float wet = reached * (1.0f - foliage) * Open(at, CoverTransform, UpRain);
+    clip(wet - DRIEST);
 
     // The normal is the solid depth's own, at the centre of the half-resolution pixel this one lies
     // in, so neighbouring rows read the same surface, and from neighbours farther apart far off,
@@ -196,8 +198,7 @@ float4 GroundPS(float3 ray : TEXCOORD0, float2 pixel : VPOS) : COLOR {
     // Lamps and highlights keep their light; the rest darkens, open ground into mud.
     const float luma = dot(scene.rgb, float3(0.299f, 0.587f, 0.114f));
     const float lit = smoothstep(SkyHigh.w, 2.0f * SkyHigh.w, luma);
-    const float3 mud = lerp(float3(0.78f, 0.78f, 0.78f),
-                            float3(0.62f, 0.54f, 0.46f) * SkyLow.w + (1.0f - SkyLow.w), ground);
+    const float3 mud = lerp(float3(0.78f, 0.78f, 0.78f), float3(0.62f, 0.54f, 0.46f), ground);
     float3 colour = scene.rgb * lerp(1.0f, mud, wet * (1.0f - lit));
     const float grey = dot(colour, float3(0.299f, 0.587f, 0.114f));
     colour = max(lerp(grey, colour, 1.0f + 0.3f * wet), 0.0f);

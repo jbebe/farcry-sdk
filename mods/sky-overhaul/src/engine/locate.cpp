@@ -10,3 +10,12 @@ uintptr_t SkyOverhaul::Locate(const char* what, uintptr_t mapped, uintptr_t scan
     }
     return scanned != 0 ? scanned : mapped;
 }
+
+bool SkyOverhaul::HookAt(uintptr_t target, void* detour, void** original, const char* missing,
+                         const char* what) {
+    if (target == 0) {
+        FCSE::Logf(missing, what);
+        return false;
+    }
+    return FCSE::ApiPointer()->Hook(reinterpret_cast<void*>(target), detour, original);
+}

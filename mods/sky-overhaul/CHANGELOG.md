@@ -58,7 +58,11 @@ Notable changes to Sky Overhaul, loosely following
   and fade in up to forty, and a milky, hazy sky hides more of them.
 - **Faster.** Sky Overhaul costs about a third less GPU time: the sky's air is worked out once a
   frame instead of for every pixel, the clouds are drawn at half resolution, and the heat haze reads
-  its noise less often. Thin cloud edges are a touch grainier; the rest looks as it did.
+  its noise less often. Thin cloud edges are a touch grainier; the rest looks as it did. The extra
+  depth the heat haze and the wet ground read is drawn only while they show something.
+- **No shadows drawn in the pitch dark.** On a night too dark for the moon to cast a shadow, before
+  it rises or under overcast or a storm, the game draws no shadows at all: a stormy night runs about
+  a third faster. Moonlit nights keep their shadows as far out as by day.
 
 ### Fixed
 - **Even frame pacing.** Looking at a still sky could make every tenth frame or so take twice as

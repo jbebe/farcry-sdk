@@ -26,4 +26,12 @@ inline float Random(int x, int y, int z, uint32_t seed) {
     return Unit(Hash(x, y, z, seed));
 }
 
+// The next number from 0 to 1 of the xorshift stream kept in `state`, which must not start at 0.
+inline float NextUnit(uint32_t& state) {
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    return static_cast<float>(state >> 8) / 16777216.0f;
+}
+
 }

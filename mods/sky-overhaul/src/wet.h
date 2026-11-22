@@ -9,12 +9,14 @@
 
 namespace SkyOverhaul::Wet {
 
-// How wet the open world is, how hard it rains and how full the puddles are, each nought to one, for
-// the draws that follow.
-void Set(float wetness, float rain, float puddles);
+// How wet the open world is, how hard it rains and how full the puddles are, each nought to one, and
+// the clock in seconds, wrapped, that the rings in puddles and on water both run on; for the draws
+// that follow.
+void Set(float wetness, float rain, float puddles, float clock);
 float Wetness();
 float Rain();
 float Puddles();
+float Clock();
 
 // DomeDraw's shine change.
 void Shine(IDirect3DDevice9* device, const uint8_t* shine, DomeDraw::ShineSaved& saved);

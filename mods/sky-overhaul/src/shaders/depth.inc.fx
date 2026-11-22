@@ -49,6 +49,13 @@ float3 ViewRay(float2 uv) {
            CameraUp.xyz * ((1.0f - uv.y * 2.0f) * Lens.y);
 }
 
+// How much of what was drawn at `ray` from the eye the engine's fog hides, from the registers
+// DepthConstants::Fog fills: the distance fog with the eye's height, then the height fog.
+float EngineFogged(float3 ray, float4 fog, float4 height) {
+    return saturate(saturate(length(ray) * fog.x + fog.y) * fog.z *
+                    (saturate((fog.w + ray.z) * height.x + height.y) * height.z + height.w));
+}
+
 // Where a direction ahead of the camera lands on screen, in texture coordinates: ViewRay undone.
 float2 OnScreen(float3 direction) {
     float ahead = max(dot(direction, CameraForward.xyz), 1e-4f);

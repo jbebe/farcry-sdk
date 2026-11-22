@@ -1,5 +1,6 @@
 #include "cell_map.h"
 
+#include "blend.h"
 #include "engine/com.h"
 #include "fcse_api.h"
 #include "weather/weather.h"
@@ -35,10 +36,7 @@ namespace {
     ULONGLONG g_drawnAt = 0;
     float g_texels[kTexels][kTexels][4];
 
-    float Smooth(float t) {
-        t = std::clamp(t, 0.0f, 1.0f);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    using SkyOverhaul::Smooth;
 
     // How far a cell's outline bulges out toward `angle`, against a circle: a few lobes, turned by
     // `seed` so no two cells share an outline.

@@ -127,6 +127,12 @@ agreed; every number is a first draft.
 - **Leaves let the rain through** (2026-11-22). Tree crowns kept the ground below them dry in their
   own shape, which cut the puddles like a shadow; user: "it should not do that". Leaves are left out
   of the engine's cover map, so the rain also falls through trees; roofs and trunks still cover.
+- **No shadows on a pitch-dark night** (2026-11-22). The long sun-shadow ranges cost 1.6 ms a frame
+  at night in a storm, where nothing shows a shadow. User: "if its pitch dark then we can turn off
+  shadows of course. but during moonlight, we should use the one we have during daylight". At full
+  night the scene light casts no shadows while the moon gives under 15% of the light, ambient
+  included: before moonrise and under overcast or a storm. Clear and cumulus nights keep their
+  moon shadows at the daytime ranges, and a lightning flash does not switch them.
 
 ## What the game does now
 

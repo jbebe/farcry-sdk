@@ -1,5 +1,7 @@
 #include "rain.h"
 
+#include "blend.h"
+#include "hash.h"
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/com.h"
@@ -59,8 +61,6 @@ namespace {
     constexpr float kNarrowest = 1.0f;
     constexpr float kOpacity = 0.5f;
     constexpr float kFarthest = 30.0f;
-    // The drops against the fog's colour, which is what the sky round them gives.
-    constexpr float kBrightness = 1.0f;
 
     // Below this the rain is gone.
     constexpr float kFaintest = 0.01f;
@@ -72,6 +72,8 @@ namespace {
     constexpr float kDraining = 1.0f / 1800.0f;
     // The player's speed is ignored past this, which is a teleport or a load, not a run.
     constexpr float kFastestEye = 30.0f;
+    // The rings' clock wraps every this many seconds, which keeps it precise in a float.
+    constexpr double kRingClockWrap = 4096.0;
 
     struct DropVertex {
         float seed[4];
@@ -89,26 +91,15 @@ namespace {
 
     SkyOverhaul::Stopwatch g_stopwatch;
     double g_seconds = 0.0;
+    double g_ringClock = 0.0;
     float g_wetness = 0.0f;
     float g_puddles = 0.0f;
     float g_lastEye[3] = {};
     float g_eyeVelocity[3] = {};
     bool g_haveEye = false;
 
-    float Mix(float a, float b, float t) {
-        return a + (b - a) * t;
-    }
-
-    uint32_t Next(uint32_t& state) {
-        state ^= state << 13;
-        state ^= state >> 17;
-        state ^= state << 5;
-        return state;
-    }
-
-    float Unit(uint32_t& state) {
-        return static_cast<float>(Next(state) >> 8) / 16777216.0f;
-    }
+    using SkyOverhaul::Mix;
+    using SkyOverhaul::NextUnit;
 
     bool FillVertices() {
         void* data = nullptr;
@@ -118,7 +109,8 @@ namespace {
         auto* vertices = static_cast<DropVertex*>(data);
         uint32_t state = 0x9E3779B9u;
         for (UINT drop = 0; drop < kDrops; drop++) {
-            const float seed[4] = {Unit(state), Unit(state), Unit(state), Unit(state)};
+            const float seed[4] = {NextUnit(state), NextUnit(state), NextUnit(state),
+                                   NextUnit(state)};
             for (UINT corner = 0; corner < 4; corner++) {
                 DropVertex& vertex = vertices[drop * 4 + corner];
                 std::memcpy(vertex.seed, seed, sizeof(seed));
@@ -200,17 +192,6 @@ namespace {
         g_haveEye = true;
     }
 
-    // A world-to-clip transform moved to the eye: the same transform of a point given relative to it.
-    void FromEye(const float m[16], const float eye[3], float out[16]) {
-        std::memcpy(out, m, 16 * sizeof(float));
-        for (int row = 0; row < 4; row++) {
-            const float* r = m + row * 4;
-            out[row * 4 + 3] = static_cast<float>(static_cast<double>(r[0]) * eye[0] +
-                                                  static_cast<double>(r[1]) * eye[1] +
-                                                  static_cast<double>(r[2]) * eye[2] + r[3]);
-        }
-    }
-
     double Wrap(double value) {
         return value - std::floor(value);
     }
@@ -243,8 +224,9 @@ namespace {
 
     // How wet the open world is and how full its puddles: the weather's own reckoning while it runs,
     // else the game's rain wetting the ground and filling the puddles over a few minutes, and the
-    // dry air taking both back over a quarter and half an hour.
+    // dry air taking both back over a quarter and half an hour. The rings' clock runs on with it.
     void UpdateWet(float strength, float seconds) {
+        g_ringClock = std::fmod(g_ringClock + seconds, kRingClockWrap);
         SkyOverhaul::Weather::Reading reading;
         if (SkyOverhaul::Weather::Latest(reading)) {
             g_wetness = reading.wet;
@@ -255,7 +237,7 @@ namespace {
             g_puddles = std::clamp(
                 g_puddles + (raining ? kFilling * strength : -kDraining) * seconds, 0.0f, 1.0f);
         }
-        SkyOverhaul::Wet::Set(g_wetness, strength, g_puddles);
+        SkyOverhaul::Wet::Set(g_wetness, strength, g_puddles, static_cast<float>(g_ringClock));
     }
 
     // What the drops draw from.
@@ -270,22 +252,12 @@ namespace {
     };
 
     // The cover map's transform, eye-relative, and the sampler state its compare reads through.
-    void BindCover(IDirect3DDevice9* device, const Shower& shower, DWORD sampler, float out[16]) {
-        FromEye(shower.cover.transform, shower.view.eye, out);
+    void BindCover(SkyOverhaul::ScreenDraw& draw, const Shower& shower, DWORD sampler,
+                   float out[16]) {
+        SkyOverhaul::Camera::FromEye(shower.cover.transform, shower.view.eye, out);
         // Filtered, a shadow texture's projected read is a soft compare.
-        device->SetTexture(sampler, shower.cover.texture);
-        device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-        device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    }
-
-    void BlendOver(IDirect3DDevice9* device) {
-        device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-        device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-        device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-        // The world target's alpha carries brightness for the bloom.
-        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
-                                                           D3DCOLORWRITEENABLE_GREEN |
-                                                           D3DCOLORWRITEENABLE_BLUE);
+        shower.pass.device->SetTexture(sampler, shower.cover.texture);
+        draw.Linear(sampler);
     }
 
     // A frame of the rain clock, wrapped to a share of `size`: `shift` plus how far a point moving
@@ -313,11 +285,14 @@ namespace {
         VertexState saved(device);
 
         device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-        BlendOver(device);
+        device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+        draw.KeepAlpha();
 
         float transforms[32];
-        FromEye(view.viewProjection, view.eye, transforms);
-        BindCover(device, shower, kCoverSampler, transforms + 16);
+        SkyOverhaul::Camera::FromEye(view.viewProjection, view.eye, transforms);
+        BindCover(draw, shower, kCoverSampler, transforms + 16);
         device->SetVertexShaderConstantF(kViewProjection, transforms, 4);
         device->SetVertexShaderConstantF(kCoverTransform, transforms + 16, 4);
 
@@ -329,8 +304,8 @@ namespace {
         const float look[4] = {kOpacity, kFarthest, view.verticalScale, 0.0f};
         device->SetVertexShaderConstantF(kScreen, screen, 1);
         device->SetVertexShaderConstantF(kLook, look, 1);
-        const float colour[4] = {view.fogColour[0] * kBrightness, view.fogColour[1] * kBrightness,
-                                 view.fogColour[2] * kBrightness,
+        // The drops take the fog's colour, which is what the sky round them gives.
+        const float colour[4] = {view.fogColour[0], view.fogColour[1], view.fogColour[2],
                                  0.5f / static_cast<float>(shower.cover.size)};
         device->SetPixelShaderConstantF(kDropColour, colour, 1);
 
@@ -369,11 +344,10 @@ namespace {
 
 void SkyOverhaul::Rain::SetEnabled(bool enabled) {
     g_enabled = enabled;
-    DomeDraw::SetWatchDepth(DomeDraw::DepthUser::Rain, enabled);
     DomeDraw::SetShine(enabled ? &Wet::Shine : nullptr);
     if (!enabled) {
         RainComponent::SetDropsHidden(false);
-        Wet::Set(0.0f, 0.0f, 0.0f);
+        Wet::Set(0.0f, 0.0f, 0.0f, 0.0f);
     }
 }
 
@@ -395,7 +369,7 @@ void SkyOverhaul::Rain::OnScenePass(const Frame::Pass& pass) {
     const bool raining = RainComponent::Latest(rain) && rain.started;
     const float strength = raining ? std::clamp(rain.strength, 0.0f, 1.0f) : 0.0f;
     UpdateWet(strength, seconds);
-    Ripples::OnScenePass(pass, strength);
+    Ripples::OnScenePass(pass, strength, Wet::Clock());
 
     // The game's drops come back for any frame ours cannot be drawn in.
     RainCover::Found cover;

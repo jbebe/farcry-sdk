@@ -26,7 +26,6 @@ namespace {
     // frame goes by without it.
     IDirect3DSurface9* g_depth = nullptr;
     uint32_t g_frame = 0;
-    bool g_have = false;
 
     bool IsDepthTexture(IDirect3DSurface9* depth, UINT size, IDirect3DTexture9*& texture) {
         D3DSURFACE_DESC desc = {};
@@ -94,7 +93,6 @@ void SkyOverhaul::RainCover::OnOffscreenPass(const Frame::Pass& pass) {
     std::memcpy(g_found.transform, transform, sizeof(transform));
     g_depth = pass.depth;
     g_frame = pass.frame;
-    g_have = true;
 }
 
 void SkyOverhaul::RainCover::ForShaders(const Camera::View& view, float transform[16],
@@ -110,18 +108,12 @@ void SkyOverhaul::RainCover::ForShaders(const Camera::View& view, float transfor
             upRain[i] = -state.direction[i] * kUpRain;
         }
     }
-    if (!g_have) {
+    if (g_found.texture == nullptr) {
         transform[3] = 10.0f;
         transform[15] = 1.0f;
         return;
     }
-    std::memcpy(transform, g_found.transform, 16 * sizeof(float));
-    for (int row = 0; row < 4; row++) {
-        const float* r = g_found.transform + row * 4;
-        transform[row * 4 + 3] = static_cast<float>(
-            static_cast<double>(r[0]) * view.eye[0] + static_cast<double>(r[1]) * view.eye[1] +
-            static_cast<double>(r[2]) * view.eye[2] + r[3]);
-    }
+    Camera::FromEye(g_found.transform, view.eye, transform);
     upRain[3] = 0.5f / static_cast<float>(g_found.size);
 }
 
@@ -142,15 +134,11 @@ bool SkyOverhaul::RainCover::Drawing(IDirect3DDevice9* device) {
 }
 
 bool SkyOverhaul::RainCover::Latest(uint32_t frame, Found& out) {
-    if (!g_have || g_frame != frame) {
-        return false;
-    }
-    out = g_found;
-    return true;
+    return g_frame == frame && LastSeen(out);
 }
 
 bool SkyOverhaul::RainCover::LastSeen(Found& out) {
-    if (!g_have) {
+    if (g_found.texture == nullptr) {
         return false;
     }
     out = g_found;
@@ -160,5 +148,4 @@ bool SkyOverhaul::RainCover::LastSeen(Found& out) {
 void SkyOverhaul::RainCover::ReleaseDeviceObjects() {
     g_found = {};
     g_depth = nullptr;
-    g_have = false;
 }

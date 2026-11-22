@@ -5,6 +5,8 @@
 
 #include "clip_quad_vs.h"
 
+#include <initializer_list>
+
 namespace {
     constexpr DWORD kVertexFormat = D3DFVF_XYZRHW | D3DFVF_TEX1;
 
@@ -238,6 +240,23 @@ SkyOverhaul::ScreenDraw::ScreenDraw(IDirect3DDevice9* device, UINT firstConstant
     wholeRange.MinZ = 0.0f;
     wholeRange.MaxZ = 1.0f;
     m_device->SetViewport(&wholeRange);
+}
+
+void SkyOverhaul::ScreenDraw::KeepAlpha() {
+    m_device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED |
+                                                         D3DCOLORWRITEENABLE_GREEN |
+                                                         D3DCOLORWRITEENABLE_BLUE);
+}
+
+void SkyOverhaul::ScreenDraw::Linear(DWORD sampler) {
+    m_device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    m_device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+}
+
+void SkyOverhaul::ScreenDraw::Wrap(DWORD sampler) {
+    for (D3DSAMPLERSTATETYPE axis : {D3DSAMP_ADDRESSU, D3DSAMP_ADDRESSV, D3DSAMP_ADDRESSW}) {
+        m_device->SetSamplerState(sampler, axis, D3DTADDRESS_WRAP);
+    }
 }
 
 SkyOverhaul::ScreenDraw::~ScreenDraw() {

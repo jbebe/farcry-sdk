@@ -4,6 +4,7 @@
 #include "engine/camera.h"
 #include "engine/depth_texture.h"
 
+#include <algorithm>
 #include <d3d9.h>
 
 namespace SkyOverhaul::DepthConstants {
@@ -29,6 +30,15 @@ inline void Set(IDirect3DDevice9* device, const Camera::View& view, const DepthT
         view.direction[0], view.direction[1], view.direction[2], 0.0f};
     device->SetPixelShaderConstantF(kFirst, values, kCount);
     device->SetTexture(kSampler, depth.texture);
+}
+
+// The two registers depth.inc.fx's EngineFogged reads: the distance fog with the eye's height, then
+// the height fog.
+inline void Fog(const Camera::View& view, float out[8]) {
+    const float values[8] = {view.fogValues[0], view.fogValues[1], view.fogValues[2], view.eye[2],
+                             view.fogHeightValues[0], view.fogHeightValues[1],
+                             view.fogHeightValues[2], view.fogHeightValues[3]};
+    std::copy(values, values + 8, out);
 }
 
 }
