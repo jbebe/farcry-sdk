@@ -1,10 +1,11 @@
 r"""What each of Sky Overhaul's switches costs: one scripted session that plays the route, then turns
 each switch off for 10 s in turn, with 10 s of every switch on between them, and all of them off at
 the end. With --alone it starts from all of them off and turns each on by itself instead, which also
-counts what a part shares with others. The session log, its segments and the report go into the
-newest perftest run folder.
+counts what a part shares with others. --weather holds one of the mod's weathers by id and --hour
+sets the clock, both before the route, so rain, storms and the night cost what they cost. The session
+log, its segments and the report go into the newest perftest run folder.
 
-    python -I switches.py [--alone]
+    python -I switches.py [--alone] [--weather O3] [--hour 23]
     python -I switches.py --report <run folder>\switches-1.csv
 """
 
@@ -24,7 +25,8 @@ from fc2drive import GameError, install, launch
 PLUGIN = "SkyOverhaul"
 # Each switch with its value on and off; off is the engine's own drawing, or none.
 SWITCHES = [(name, "Overhaul", "Engine") for name in
-            ("Sky", "Clouds", "Sun", "Night", "Shadows", "Grade", "Grass", "Leaves", "Sun shadows")] + \
+            ("Sky", "Clouds", "Sun", "Night", "Shadows", "Grade", "Grass", "Leaves", "Sun shadows",
+             "Weather", "Rain")] + \
            [(name, "On", "Off") for name in ("Grain", "Occlusion", "Heat haze", "Flatten")]
 SEGMENT = 10.0
 # Seconds of a segment left out at its start, for a switch to take hold, and at its end.
@@ -36,10 +38,16 @@ ALL_ON = "all on"
 ALL_OFF = "all off"
 
 
-def play(alone):
+def play(alone, weather, hour):
     """Plays the session and returns its segments, timed in seconds from the walk's start."""
     segments = []
     with launch(SAVE, args=["-perftest"]) as game:
+        # Six minutes stood in the open by day is long enough for a patrol to find the player.
+        game.option("Invincibility", 1)
+        if weather:
+            game.sky_weather(weather)
+        if hour is not None:
+            game.lua(f"CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay({hour}, 0)")
         walked = route(game)
 
         def segment(label, values):
@@ -129,6 +137,8 @@ def report(log):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--alone", action="store_true", help="each part on by itself, from all of them off")
+    parser.add_argument("--weather", help="one of Sky Overhaul's weathers to hold, by id, such as O3")
+    parser.add_argument("--hour", type=int, help="the hour to set the clock to")
     parser.add_argument("--report", type=Path, help="report a saved session again")
     options = parser.parse_args()
     if options.report:
@@ -136,7 +146,7 @@ def main():
         return
     began = time.time()
     try:
-        segments = play(options.alone)
+        segments = play(options.alone, options.weather, options.hour)
     except GameError as error:
         raise SystemExit(f"session failed: {error}")
     report(keep(segments, began))
