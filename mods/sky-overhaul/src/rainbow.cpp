@@ -1,5 +1,6 @@
 #include "rainbow.h"
 
+#include "angles.h"
 #include "clouds.h"
 #include "hash.h"
 #include "sky.h"
@@ -25,7 +26,7 @@ namespace {
     constexpr float kBrightness = 0.035f;
 
     // The bow's radius at its middle colour, as rainbow.fx draws it.
-    constexpr float kRadius = 41.5f * 3.14159265f / 180.0f;
+    constexpr float kRadius = SkyOverhaul::Radians(41.5f);
 
     // How much of its arc over the horizon a bow keeps from one foot, 130 of its 180 degrees, and the
     // seed each new bow rolls its foot from.

@@ -1,5 +1,6 @@
 #include "lightning.h"
 
+#include "angles.h"
 #include "blend.h"
 #include "hash.h"
 #include "engine/camera.h"
@@ -190,6 +191,9 @@ namespace {
         return SkyOverhaul::NextUnit(g_random);
     }
 
+    using SkyOverhaul::kPi;
+    using SkyOverhaul::Mix;
+    using SkyOverhaul::Radians;
     using SkyOverhaul::Smooth;
 
     // How bright a strike is `age` real seconds after it was born: held, then each pulse flaring and
@@ -302,7 +306,7 @@ namespace {
                 kChannelDrawn / 5 + static_cast<int>(Unit() * (kChannelDrawn * 2 / 5));
             const Point& from = s->channel[s->branchFrom[b]];
             const float reach = (from.z - s->ground) * (0.2f + 0.25f * Unit());
-            const float angle = Unit() * 6.2831853f;
+            const float angle = Unit() * 2.0f * kPi;
             Point branch[kBranchPoints];
             branch[0] = from;
             branch[kBranchPoints - 1] = {from.x + std::cos(angle) * reach,
@@ -340,7 +344,7 @@ namespace {
                 const SkyOverhaul::Weather::Cell& cell = list.cells[i];
                 const float rate = rates[i] * (overhead[i] ? 1.0f : share);
                 if (rate > 0.0f && Unit() < 1.0f - std::exp(-rate * seconds)) {
-                    const float angle = Unit() * 6.2831853f;
+                    const float angle = Unit() * 2.0f * kPi;
                     const float off = std::sqrt(Unit()) * cell.radius * 0.45f;
                     Spawn(cell.x + std::cos(angle) * off, cell.y + std::sin(angle) * off, eye, 0.0f, -1);
                 }
@@ -355,9 +359,9 @@ namespace {
                                 Smooth((rain - 0.3f) / 0.3f) *
                                 std::clamp((rain - kLighterRain) / (1.0f - kLighterRain), 0.0f, 1.0f);
             if (Unit() < 1.0f - std::exp(-kFrontStrikes * storm * seconds)) {
-                const float angle = Unit() * 6.2831853f;
+                const float angle = Unit() * 2.0f * kPi;
                 const float spread = Unit();
-                const float off = kFrontNearest + (kFrontFarthest - kFrontNearest) * spread * spread;
+                const float off = Mix(kFrontNearest, kFrontFarthest, spread * spread);
                 Spawn(eye[0] + std::cos(angle) * off, eye[1] + std::sin(angle) * off, eye, 0.0f, -1);
             }
         }
@@ -395,7 +399,7 @@ namespace {
         if (!asked.pending || (asked.ahead && !SkyOverhaul::Weather::Facing(degrees))) {
             return;
         }
-        const float angle = degrees * 0.0174532925f;
+        const float angle = Radians(degrees);
         Spawn(eye[0] + std::cos(angle) * asked.distance, eye[1] + std::sin(angle) * asked.distance,
               eye, asked.hold, asked.kind);
     }

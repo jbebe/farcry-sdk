@@ -7,6 +7,11 @@ namespace SkyOverhaul::Weather {
 
 enum class Family { Clear, Foggy, Overcast, Storm, Wind };
 
+// The wind's force on a calm day, in a breeze and on a windy one.
+inline constexpr float kCalm = 20.0f;
+inline constexpr float kBreeze = 45.0f;
+inline constexpr float kWindy = 110.0f;
+
 struct Row {
     const char* id;
     const char* name;

@@ -1,5 +1,6 @@
 #include "weather/weather.h"
 
+#include "blend.h"
 #include "engine/seqlock.h"
 #include "engine/time_of_day.h"
 #include "sky_model.h"
@@ -189,8 +190,7 @@ SkyOverhaul::Weather::Air SkyOverhaul::Weather::AirNow(float engineStorm) {
     if (Latest(reading)) {
         const Levers& levers = reading.levers;
         const float end = FogOf(levers).end;
-        const float close =
-            end > 0.0f ? std::clamp((kVeilFar - end) / (kVeilFar - kVeilNear), 0.0f, 1.0f) : 0.0f;
+        const float veiled = end > 0.0f ? Smooth(kVeilFar, kVeilNear, end) : 0.0f;
         return {true,
                 reading.sky,
                 levers.storminess,
@@ -198,7 +198,7 @@ SkyOverhaul::Weather::Air SkyOverhaul::Weather::AirNow(float engineStorm) {
                 reading.sky.shade,
                 levers.heat,
                 levers.milk,
-                levers.fogWeight * close * close * (3.0f - 2.0f * close),
+                levers.fogWeight * veiled,
                 Cover(levers)};
     }
     const float storminess = SkyModel::Storminess(engineStorm);

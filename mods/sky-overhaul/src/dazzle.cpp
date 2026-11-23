@@ -3,6 +3,7 @@
 #include "dazzle.h"
 
 #include "angles.h"
+#include "blend.h"
 #include "clouds.h"
 #include "sky_model.h"
 
@@ -138,7 +139,7 @@ namespace {
         const float full = std::clamp(g_thisFrame.elevation / ramp, 0.0f, 1.0f);
         const float setting = (std::min)(full, std::sin(Radians(kSettingSun)) / ramp);
         const float elevation =
-            full + (setting - full) * SkyOverhaul::SkyModel::Dusk(g_thisFrame.elevation);
+            SkyOverhaul::Mix(full, setting, SkyOverhaul::SkyModel::Dusk(g_thisFrame.elevation));
 
         const float daylight = 1.0f - std::clamp(g_thisFrame.night, 0.0f, 1.0f);
 

@@ -128,6 +128,13 @@ namespace {
         return SkyOverhaul::Luma(&Float(base, offset));
     }
 
+    void ScaleMoon(uint8_t* out, float factor) {
+        float* moon = reinterpret_cast<float*>(out + kMoonColour);
+        for (int c = 0; c < 3; c++) {
+            moon[c] *= factor;
+        }
+    }
+
     // How far a script's override of that kind has taken over, nought with none set.
     float Overridden(uint8_t* manager, size_t preset, size_t weight) {
         return *reinterpret_cast<void**>(manager + preset) != nullptr ? Float(manager, weight)
@@ -187,10 +194,7 @@ namespace {
         const float ambient = Luma(out, kAmbientColour) * Float(out, kAmbientMultiplier);
         const float gain = (std::min)(flash / (std::max)(ambient, kDarkestAmbient), kMostFlash);
         Float(out, kAmbientMultiplier) *= 1.0f + gain;
-        float* moon = reinterpret_cast<float*>(out + kMoonColour);
-        for (int c = 0; c < 3; c++) {
-            moon[c] *= 1.0f + gain * night;
-        }
+        ScaleMoon(out, 1.0f + gain * night);
     }
 
     // Has the scene light cast shadows or not from this frame on, by the share of the light the moon
@@ -221,10 +225,7 @@ namespace {
             const float kept = 1.0f - Overridden(self, kLightingOverride, kLightingOverrideWeight);
             const float cover =
                 (std::max)(SkyOverhaul::Weather::Cover(reading.levers), kBrightestNightCover) * kept;
-            float* moon = reinterpret_cast<float*>(out + kMoonColour);
-            for (int c = 0; c < 3; c++) {
-                moon[c] *= 1.0f - cover;
-            }
+            ScaleMoon(out, 1.0f - cover);
             Float(out, kAmbientMultiplier) *= 1.0f - kCloudedAmbientLoss * cover * night;
         }
         if (g_sceneLighting && _ReturnAddress() == g_sceneLighting.get() + kSceneLightingReturn) {

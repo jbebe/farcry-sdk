@@ -5,11 +5,11 @@
 
 namespace {
     using SkyOverhaul::Weather::Family;
+    using SkyOverhaul::Weather::kBreeze;
+    using SkyOverhaul::Weather::kCalm;
+    using SkyOverhaul::Weather::kWindy;
     using SkyOverhaul::Weather::Row;
 
-    constexpr float kCalm = 20.0f;
-    constexpr float kBreeze = 45.0f;
-    constexpr float kWindy = 110.0f;
     constexpr float kGale = 190.0f;
 
     #define GAME_FOG 0.0f, {1.0f, 1.0f, 1.0f}

@@ -102,23 +102,25 @@ void SkyOverhaul::Wet::Shine(IDirect3DDevice9* device, const uint8_t* shine,
     Changes changes(device, shine, saved);
     if (w >= kFaintest) {
         const float lit = w * g_daylight;
-        const auto colour = [lit](float* v) {
-            for (int c = 0; c < 3; c++) {
-                const float wet = v[c] * (1.0f + kSpecularGain * lit) + kSpecularFloor * lit;
-                v[c] = (std::max)(v[c], (std::min)(wet, kSpecularMost));
+        if (lit >= kFaintest) {
+            const auto colour = [lit](float* v) {
+                for (int c = 0; c < 3; c++) {
+                    const float wet = v[c] * (1.0f + kSpecularGain * lit) + kSpecularFloor * lit;
+                    v[c] = (std::max)(v[c], (std::min)(wet, kSpecularMost));
+                }
+            };
+            for (int field : {Field::kSpecularColorBase, Field::kSpecularColor1,
+                              Field::kSpecularColorBaseClean, Field::kSpecularColor1Clean,
+                              Field::kSpecularColorBaseBroken, Field::kSpecularColor1Broken}) {
+                changes.Apply(field, colour);
             }
-        };
+            changes.Apply(Field::kDetailSpecularColor, colour, shine[Field::kDetailSpecularCount]);
+        }
         const auto gloss = [w](float* v) {
             for (int c = 0; c < 4; c++) {
                 v[c] *= 1.0f + kGlossGain * w;
             }
         };
-        for (int field : {Field::kSpecularColorBase, Field::kSpecularColor1,
-                          Field::kSpecularColorBaseClean, Field::kSpecularColor1Clean,
-                          Field::kSpecularColorBaseBroken, Field::kSpecularColor1Broken}) {
-            changes.Apply(field, colour);
-        }
-        changes.Apply(Field::kDetailSpecularColor, colour, shine[Field::kDetailSpecularCount]);
         changes.Apply(Field::kSpecularPower, gloss);
         changes.Apply(Field::kSpecularShininess, gloss);
     }

@@ -2,6 +2,7 @@
 
 #include "blend.h"
 #include "hash.h"
+#include "weather/table.h"
 
 #include <algorithm>
 #include <cmath>
@@ -9,6 +10,9 @@
 
 namespace {
     using SkyOverhaul::Weather::Family;
+    using SkyOverhaul::Weather::kBreeze;
+    using SkyOverhaul::Weather::kCalm;
+    using SkyOverhaul::Weather::kWindy;
     using SkyOverhaul::Weather::Levers;
 
     constexpr double kHour = 3600.0;
@@ -133,9 +137,6 @@ namespace {
     constexpr float kCrispDays = 0.4f;
     constexpr float kStillDust = 0.35f;
     constexpr float kSavannahDust = 0.6f;
-    constexpr float kCalmWind = 20.0f;
-    constexpr float kBreezeWind = 45.0f;
-    constexpr float kDustyWind = 110.0f;
     constexpr float kDustMilk = 0.8f;
     // How far above the player's ground lifted dust has thinned out: deep enough that the far hills
     // Flatten draws low stay inside it.
@@ -509,8 +510,7 @@ namespace {
         const double day = std::floor(moment.seconds / kDay);
         const float dusty = Smooth((Roll(static_cast<long long>(day), 8) - kCrispDays) /
                                    (1.0f - kCrispDays));
-        const float lift =
-            Mix(kStillDust, 1.0f, Smooth((levers.wind - kCalmWind) / (kDustyWind - kCalmWind)));
+        const float lift = Mix(kStillDust, 1.0f, Smooth(kCalm, kWindy, levers.wind));
         const float daylight = Smooth((moment.sunHeight - 0.05f) / 0.3f);
         const float ground = Clamp01(moment.desert + kSavannahDust * moment.savannah);
         return (std::max)(levers.dust, dusty * lift * daylight) * (1.0f - wet) * ground *
@@ -545,7 +545,7 @@ namespace {
         reading.wet = (std::max)(Smooth(levers.rain / kWetRain), drying);
         AddRainFog(levers);
         reading.dust = Dust(levers, moment, reading.wet);
-        const float lifted = Smooth((levers.wind - kBreezeWind) / (kDustyWind - kBreezeWind));
+        const float lifted = Smooth(kBreeze, kWindy, levers.wind);
         SkyOverhaul::Weather::AddFog(
             levers,
             {Mix(kLightDust, kThickDust, reading.dust), {kDustTint[0], kDustTint[1], kDustTint[2]},

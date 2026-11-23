@@ -6,8 +6,8 @@
 
 namespace SkyOverhaul::Sound {
 
-// False when the sound system's calls were not found in this build, which it logs.
-bool Install();
+// Logs when the sound system's calls were not found in this build, and plays nothing then.
+void Install();
 
 // Asks for the bank holding `id` to be loaded and kept, once.
 void Hold(uint32_t id);

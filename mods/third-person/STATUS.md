@@ -34,7 +34,7 @@ Stage: active
 
 ## Checks
 
-- simplify: 150efa45 2026-11-17 - since third-person-1.0.0; the interaction hold-back two small cuts, the crosshair fix clean
+- simplify: 2091bf87 2026-11-23 - since third-person-1.0.1; one depth format accepted beside the old, nothing to cut
 
 ## Release order
 

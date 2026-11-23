@@ -41,12 +41,11 @@ namespace {
     }
 }
 
-bool SkyOverhaul::Sound::Install() {
+void SkyOverhaul::Sound::Install() {
     g_ready = g_getSoundSystem && g_getFromSoundId;
     if (!g_ready) {
         FCSE::Logf("sound: the sound system calls were not found in this build - no thunder");
     }
-    return g_ready;
 }
 
 void SkyOverhaul::Sound::Hold(uint32_t id) {

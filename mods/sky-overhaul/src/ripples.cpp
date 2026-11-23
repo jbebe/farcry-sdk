@@ -1,5 +1,6 @@
 #include "ripples.h"
 
+#include "blend.h"
 #include "engine/noise.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
@@ -34,7 +35,7 @@ void SkyOverhaul::Ripples::OnScenePass(const Frame::Pass& pass, float rain, floa
     }
     ScreenDraw draw(device, kFirstConstant, kConstants);
     const float constants[kConstants * 4] = {
-        rain, clock, kCells, kGentlest + (kSteepest - kGentlest) * rain,
+        rain, clock, kCells, Mix(kGentlest, kSteepest, rain),
         1.0f / static_cast<float>(kSize), 1.0f / static_cast<float>(kSize), 0.0f, 0.0f};
     device->SetPixelShaderConstantF(kFirstConstant, constants, kConstants);
     device->SetTexture(kShapeSampler, Noise::Shape());

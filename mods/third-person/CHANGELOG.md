@@ -3,7 +3,7 @@
 Notable changes to Third Person, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.0.2] - 2026-11-23
 
 ### Fixed
 - **Works with the next Sky Overhaul.** It stores the game's depth image in half floats, which this

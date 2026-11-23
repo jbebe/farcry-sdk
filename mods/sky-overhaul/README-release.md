@@ -8,11 +8,19 @@ through the whole day, the weather and the night.
 - **Volumetric clouds**, a high cirrus sheet and aircraft trails. They drift with the game's clock,
   so loading a save shows the sky you left, and every midnight rolls a new set of one to three
   trails.
-- **Storms** that thicken the clouds and grey the light without drowning the land in fog.
+- **Weather** that changes by itself and saves with the game's clock: clear days, haze, morning
+  fog, overcast, drizzle and rain, wind and dust, and showers and storms that drift over the map
+  behind a dark warning sky, most over the jungle and few over the desert.
+- **Rain you can see**, thousands of streaks slanted by the wind and none under a roof, and a wet
+  world after it: mud, shining surfaces, puddles on level ground that mirror what stands round them
+  and rings on lakes and rivers, all drying over a few hours.
+- **Lightning and thunder**: clouds lit from inside, branching bolts, a flash on the land by how
+  near the strike is, and thunder as late as sound would bring it.
+- **A rainbow** opposite a low sun once the rain where you stand stops.
 - **The sun**: light shafts that stop at the clouds, and a glare the clouds cover.
 - **Cloud shadows** on the ground.
 - **The night**: a smaller moon lit on the clouds, darker nights with moonlight that throws shadows,
-  and the world's colour draining where it is dark.
+  clouds that keep the moonlight off the ground, and the world's colour draining where it is dark.
 - **A neutral colour grade** in place of the game's yellow cast, a faint film grain, and ambient
   occlusion in corners and creases.
 - **The world in that light**: grass and tree leaves lit by the sun, and sun shadows that reach
@@ -54,6 +62,8 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
   whole preset library, and the moon and storm changes as its whole environment block.
 - **Other rendering plugins** can hook the same calls in the game's renderer; FCSE runs both.
   DevTools and UFCP work alongside it.
+- **Third Person 1.0.2 or later** alongside this version: an older one cannot read the depth this
+  version stores.
 
 ## Known issues
 

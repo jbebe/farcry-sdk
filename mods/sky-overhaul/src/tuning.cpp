@@ -331,6 +331,7 @@ namespace {
             if (row >= 0 && parameter.row != nullptr && Trim(key.substr(space + 1)) == parameter.key) {
                 SkyOverhaul::Weather::Rows()[row].*parameter.row =
                     std::clamp(value, parameter.min, parameter.max);
+                break;
             }
         }
         return true;
