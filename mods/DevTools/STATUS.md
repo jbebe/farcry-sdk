@@ -66,6 +66,7 @@ Stage: active
 - 0x001449B0: stacks - the input pass, which DevTools, Flashlight and Third Person each hook as g_inputPass; FCSE stacks same-address hooks
 - 0x00422510: stacks - the engine device's EndScene, which Sky, Aiming, Vehicle and Inventory Overhaul, Third Person and DevTools hook; FCSE chains them
 - sky-overhaul: stacks - both hook the engine device's EndScene, which FCSE chains
-- 0x00118AE0, 0x0011B480: stacks - the environment manager's wind push and rain update, which DevTools and Sky Overhaul hook; DevTools loads first in name order, so its forcing runs beneath Sky's weather and wins
+- 0x00118AE0: stacks - the environment manager's wind push, which DevTools and Sky Overhaul hook; DevTools loads first in name order, so its forcing runs beneath Sky's weather and wins
+- 0x0011B480: stacks - the environment manager's rain update, which DevTools and Sky Overhaul hook; DevTools loads first in name order, so its forcing runs beneath Sky's weather and wins
 - 0x00422630: stacks - the engine device's Reset, which Aiming, Vehicle and Inventory Overhaul and DevTools hook; FCSE chains them
 - 0x00345C70: stacks - DevTools' precache and UFCP's frame-limiter mid-hooks sit 0x4A1 bytes apart on both builds, neither inside the other's pattern
