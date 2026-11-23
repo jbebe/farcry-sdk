@@ -18,16 +18,22 @@
     the vanilla files plus this layer alone, so any other layer built into it before is dropped.
     Off by default.
 
+.PARAMETER Tests
+    Also runs SkyOverhaulTests.exe, the weather timeline's checks, after a successful build.
+
 .EXAMPLE
     .\build.ps1
     .\build.ps1 -Config debug
+    .\build.ps1 -Tests
     .\build.ps1 -Install "C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2\bin"
 #>
 param(
     [ValidateSet("release", "debug")]
     [string]$Config = "release",
 
-    [string]$Install
+    [string]$Install,
+
+    [switch]$Tests
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,6 +77,12 @@ if ($LASTEXITCODE -ne 0) { throw "Build failed (exit $LASTEXITCODE)." }
 
 $OutputDll = Join-Path $BuildDir "SkyOverhaul.dll"
 Write-Host "Build succeeded: $OutputDll" -ForegroundColor Green
+
+if ($Tests) {
+    Write-Host "Testing ($Preset)..." -ForegroundColor Cyan
+    & (Join-Path $BuildDir "SkyOverhaulTests.exe")
+    if ($LASTEXITCODE -ne 0) { throw "Tests failed (exit $LASTEXITCODE)." }
+}
 
 if ($Install) {
     # FCSE scans bin\plugins\ by name. Copied there as well as into the layer because jackall-cli

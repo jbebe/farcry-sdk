@@ -44,7 +44,7 @@ jobs:
 
       - name: Build SkyOverhaul.dll
         shell: pwsh
-        run: .\build.ps1 -Config release
+        run: .\build.ps1 -Config release -Tests
 
       - name: Stage release contents
         shell: pwsh

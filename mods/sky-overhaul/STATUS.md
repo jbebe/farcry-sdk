@@ -62,7 +62,7 @@ Stage: maintenance
 
 ## Approvals
 
-- played: a638af0c 2026-11-23 - "I validated it all manually, everything has been verified working"
+- played: ffd39be5 2026-11-23 - "I tested it, all works"
 - page text: 844c90c 2026-11-17 - "they are good"
 
 ## Checks
