@@ -31,14 +31,6 @@ struct Values {
     float glareDesaturation;
     float elevationRamp;
 
-    float afterimageStrength;
-    float afterimageSeconds;
-    float afterimageDarkness;
-    float afterimageTint;
-    float afterimageSaturation;
-    float afterimageSize;
-    float afterimageHaze;
-
     float nightStrength;
     float nightColourAbove;
     float nightPurkinje;

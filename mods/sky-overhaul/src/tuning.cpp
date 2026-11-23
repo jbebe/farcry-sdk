@@ -77,7 +77,6 @@ namespace {
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
     constexpr Group kSunGlare = {"Sun glare", &kSun};
-    constexpr Group kAfterimage = {"Afterimage", &kSun};
     constexpr Group kNightVision = {"Night vision", &kNight};
     constexpr Group kSunShadows = {"Sun shadows", &kShadows};
     constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
@@ -143,22 +142,6 @@ namespace {
          "How fast colour drains as the dazzle rises. One reaches grey only at full dazzle."},
         {"Sun elevation ramp", &kSunGlare, offsetof(Values, elevationRamp), 40.0f, 1.0f, 45.0f,
          "%.0f deg", "The sun's elevation at which the glare reaches full strength."},
-
-        {"Afterimage strength", &kAfterimage, offsetof(Values, afterimageStrength), 1.0f, 0.0f, 1.0f,
-         "%.2f", "How strongly the burned-in view shows once the player looks away."},
-        {"Afterimage seconds", &kAfterimage, offsetof(Values, afterimageSeconds), 10.0f, 1.0f,
-         10.0f, "%.1f s",
-         "The longest the exposure builds up to, which is also how long it takes to fade."},
-        {"Afterimage darkness", &kAfterimage, offsetof(Values, afterimageDarkness), 0.9f, 0.0f, 1.0f,
-         "%.2f", "How darkly the bleached core blocks the view at its peak."},
-        {"Afterimage tint", &kAfterimage, offsetof(Values, afterimageTint), 0.35f, 0.0f, 1.0f,
-         "%.2f", "How strongly the faint negative surround shows."},
-        {"Afterimage saturation", &kAfterimage, offsetof(Values, afterimageSaturation), 0.30f, 0.0f,
-         1.0f, "%.2f", "How much of that negative's colour survives."},
-        {"Afterimage size", &kAfterimage, offsetof(Values, afterimageSize), 0.2f, 0.05f, 1.0f,
-         "%.2f", "How wide the bleached region is, as a share of the glare's reach."},
-        {"Afterimage haze", &kAfterimage, offsetof(Values, afterimageHaze), 0.5f, 0.0f, 1.0f,
-         "%.2f", "How far the whole picture's range compresses while the eye recovers."},
 
         {"Night strength", &kNightVision, offsetof(Values, nightStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How far the world drains to rod vision once the sun is down. Zero turns it off."},

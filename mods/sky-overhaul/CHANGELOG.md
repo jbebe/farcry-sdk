@@ -64,6 +64,11 @@ Notable changes to Sky Overhaul, loosely following
   it rises or under overcast or a storm, the game draws no shadows at all: a stormy night runs about
   a third faster. Moonlit nights keep their shadows as far out as by day.
 
+### Removed
+- **The afterimage.** Staring at the sun and looking away no longer leaves a dark spot, a negative
+  of the view or a haze over it. Looking toward the sun still washes the picture out, raises its
+  contrast and drains its colour. Its values leave `sky-overhaul.ini` on the next launch.
+
 ### Fixed
 - **Even frame pacing.** Looking at a still sky could make every tenth frame or so take twice as
   long. That stutter is gone.

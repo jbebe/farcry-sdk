@@ -11,8 +11,8 @@ Stage: maintenance
 - [done] Clear days not blown out: the sky at half brightness and sunlit clouds at a quarter once the sun is up
 - [done] The game's clouds stay until ours draw, so a Direct3D injector never leaves an empty sky
 - [done] Drawn through the engine with no Direct3D hooks, so it works under dgVoodoo, ReShade and a DLSS 5 injector - user: "even with dlss, the sky is right" #63
-- [done] Sun glare and afterimage, covered by our clouds - cloud cover confirmed in game 2026-09-13
-- [new] No afterimage: the dark spot, the negative and the haze after a stare go with their values; the glare's white wash, contrast and colour loss stay as they are - the user's ask (2026-11-23)
+- [done] Sun glare, covered by our clouds - cloud cover confirmed in game 2026-09-13
+- [done] No afterimage: the dark spot, the negative and the haze after a stare go with their values; the glare's white wash, contrast and colour loss stay as they are - the user's ask (2026-11-23); user: "I tested it, all works" (2026-11-23)
 - [done] Light shafts that stop where our clouds stand - confirmed in game 2026-09-13
 - [done] Cloud shadows on the ground - needs depth pass quality high
 - [done] Night: a smaller unfogged moon, moonlit clouds, blue-grey preset nights with moon shadows - user: "looks really nice"; moonlight in full from 22:42 to 4:59 on clear and jungle nights, the user's ask (2026-11-21); the moon's face held at half of saturation with only a faint corona round its disc, none on it - user: "the moon craters should always be visible, never faded by the glow" (2026-11-22)

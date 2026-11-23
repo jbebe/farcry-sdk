@@ -9,7 +9,7 @@ through the whole day, the weather and the night.
   so loading a save shows the sky you left, and every midnight rolls a new set of one to three
   trails.
 - **Storms** that thicken the clouds and grey the light without drowning the land in fog.
-- **The sun**: light shafts that stop at the clouds, a glare the clouds cover, and an afterimage.
+- **The sun**: light shafts that stop at the clouds, and a glare the clouds cover.
 - **Cloud shadows** on the ground.
 - **The night**: a smaller moon lit on the clouds, darker nights with moonlight that throws shadows,
   and the world's colour draining where it is dark.

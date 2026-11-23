@@ -46,14 +46,11 @@ if (NOT FXC_EXECUTABLE)
                       "developer prompt (or through build.ps1, which sets one up) puts it on PATH.")
 endif()
 
-# source file : entry point : profile : generated header : array name. The dazzle's MainPS needs
-# ps_2_b for its instruction count, as does the grain, and the accumulation passes fit in ps_2_0;
-# everything drawn inside a world pass needs ps_3_0, which in turn needs the vs_3_0 ClipQuad draws
-# through.
+# source file : entry point : profile : generated header : array name. The grain needs ps_2_b for
+# its instruction count and the dazzle fits in ps_2_0; everything drawn inside a world pass needs
+# ps_3_0, which in turn needs the vs_3_0 ClipQuad draws through.
 set(SHADER_PASSES
-  "dazzle.fx:MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
-  "dazzle.fx:AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
-  "dazzle.fx:BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader"
+  "dazzle.fx:MainPS:ps_2_0:dazzle_ps.h:g_dazzlePixelShader"
   "clip_quad.fx:MainVS:vs_3_0:clip_quad_vs.h:g_clipQuadVertexShader"
   "clouds.fx:HalfPS:ps_3_0:clouds_half_ps.h:g_cloudsHalfPixelShader"
   "clouds.fx:CompositePS:ps_3_0:clouds_composite_ps.h:g_cloudsCompositePixelShader"

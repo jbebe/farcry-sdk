@@ -1,7 +1,7 @@
 # Sky Overhaul
 
 An FCSE plugin for the sun as something the eye cannot look at: a glare that washes over the finished
-frame as the player looks toward the sun, and a retinal afterimage left behind when they look away.
+frame as the player looks toward the sun.
 
 **The layer ships two data fragments per campaign world.** The world descriptor's `<Environment>`
 halves the moon's size, lets the setting sun swell to twice its size rather than three times, and
@@ -25,11 +25,6 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **The glare**, a wash that brightens toward the sun, raises contrast and drains colour, drawn over
   the world's composite so it lands under the heads-up display. It weakens with a low sun, at
   night, and with anything standing between the player and the sun, our clouds included.
-- **The afterimage.** While the eye is dazzled the view accumulates into a burn texture and the light
-  that fell on it accumulates into a bleach mask. Looking away brings up a dark tinted core where the
-  sun's image sat, a faint desaturated negative of the whole view, and a haze over everything else.
-  It arms only after a held stare, deepens with how long that stare lasted, and fades over twice as
-  long as it took to build.
 - **Light shafts through our clouds.** The engine still submits its clouds to the god-ray mask pass,
   and that one draw is replaced by our clouds' cover, blended as the engine's own, so the rays stop
   where our clouds stand. `MaskPS` in `src/shaders/clouds.fx`, and `src/engine/dome_draw.cpp`.
@@ -106,7 +101,7 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
-  Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows,
+  Overhaul for the glare), Night, Shadows, Grade, Grass, Leaves, Sun shadows,
   Weather and Rain (each Engine or Overhaul), and Occlusion, Grain, Heat haze and Flatten (each Off
   or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
