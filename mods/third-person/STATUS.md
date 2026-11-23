@@ -29,7 +29,7 @@ Stage: active
 
 ## Approvals
 
-- played: 150efa45 2026-11-17 - "played and text approved"
+- played: 01de3b31 2026-11-23 - "all is verified", with Sky Overhaul 1.7.0
 - page text: 150efa45 2026-11-17 - "played and text approved"
 
 ## Checks

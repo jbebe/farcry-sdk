@@ -62,12 +62,12 @@ Stage: maintenance
 
 ## Approvals
 
-- played: ffd39be5 2026-11-23 - "I tested it, all works"
+- played: 01de3b31 2026-11-23 - "all is verified"
 - page text: 844c90c 2026-11-17 - "they are good"
 
 ## Checks
 
-- simplify: 272c81e 2026-11-17 - since sky-overhaul-1.5.0
+- simplify: 01de3b31 2026-11-23 - since sky-overhaul-1.6.0; the storm-cell map's once-a-second 21 ms stutter cut to 1.25 ms, small cleanups; the weather state shared across modules and the shared shader code for rings and normals left as they are
 
 ## Release order
 
